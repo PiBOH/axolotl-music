@@ -8,9 +8,9 @@ import java.io.File
  * covers and the single-instance lock.
  *
  * The 1.55/1.56 beta line wrote them under `.vivimusic` (and, on Windows and
- * macOS, under a "VIVI Music DE" application-data folder). [migrateLegacyData]
- * copies those trees into the new directory once, without overwriting a file
- * the new installation already has and without deleting the old one.
+ * macOS, under a "VIVI Music DE" application-data folder). [LegacyDataMigration]
+ * copies those trees into the new directory only when it does not exist yet,
+ * without overwriting a file and without deleting the old one.
  */
 object DesktopPathProvider {
 
@@ -20,8 +20,7 @@ object DesktopPathProvider {
     val configDir: File by lazy {
         val override = System.getenv("VIVI_CONFIG_DIR")?.takeIf { it.isNotBlank() }
         val dir = override?.let(::File) ?: File(userHome, ".axolotlmusic")
-        if (!dir.exists()) dir.mkdirs()
-        migrateLegacyData(dir)
+        if (!dir.exists()) LegacyDataMigration.migrateIfMissing(dir, legacyConfigDirs())
         dir
     }
 
@@ -33,8 +32,7 @@ object DesktopPathProvider {
             return@lazy dir
         }
         val dir = File(configDir, "cache")
-        if (!dir.exists()) dir.mkdirs()
-        migrateLegacyCache(dir)
+        if (!dir.exists()) LegacyDataMigration.migrateIfMissing(dir, legacyCacheDirs())
         dir
     }
 
@@ -125,40 +123,4 @@ object DesktopPathProvider {
         }
     }.distinctBy { it.absolutePath }.filter { it.isDirectory }
 
-    private fun migrateLegacyData(target: File) {
-        val marker = File(target, ".migrated-from-vivimusic")
-        if (marker.isFile) return
-        legacyConfigDirs().forEach { legacy -> copyTree(legacy, target) }
-        if (!marker.exists()) {
-            runCatching { marker.writeText("1", Charsets.UTF_8) }
-        }
-    }
-
-    private fun migrateLegacyCache(target: File) {
-        val marker = File(target, ".migrated-from-vivimusic")
-        if (marker.isFile) return
-        legacyCacheDirs().forEach { legacy -> copyTree(legacy, target) }
-        if (!marker.exists()) {
-            runCatching { marker.writeText("1", Charsets.UTF_8) }
-        }
-    }
-
-    /**
-     * Copies every file of [source] that does not already exist under [target].
-     * The legacy folder is left untouched, so a downgrade still finds its data.
-     */
-    private fun copyTree(source: File, target: File) {
-        val sourceRoot = runCatching { source.canonicalFile }.getOrDefault(source)
-        sourceRoot.walkTopDown().forEach { entry ->
-            val relative = entry.relativeTo(sourceRoot).path
-            if (relative.isEmpty()) return@forEach
-            val destination = File(target, relative)
-            if (entry.isDirectory) {
-                destination.mkdirs()
-            } else if (entry.isFile && !destination.exists()) {
-                destination.parentFile?.mkdirs()
-                runCatching { entry.copyTo(destination, overwrite = false) }
-            }
-        }
-    }
 }
