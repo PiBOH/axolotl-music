@@ -35,10 +35,8 @@ private val storeJson = Json { ignoreUnknownKeys = true }
 /**
  * What the desktop actually knows about sync.
  *
- * This build has no relay client: the phone writes the pairing identity into
- * `device-sync.json`, and the desktop preserves those keys. The card therefore
- * reports the file that holds them, its age and whether the rotated copy is
- * older, instead of pretending to show a live connection.
+ * The live connection lives in Device Sync; this card reports the file that
+ * holds the pairing identity, its age and whether the rotated copy is older.
  */
 @Composable
 fun SyncStatusCard() {
@@ -69,9 +67,9 @@ fun SyncStatusCard() {
                 StatusLine("Rotated copy", details.backupLine)
                 StatusLine("Sync identity", details.identityLine)
                 Text(
-                    text = "This build reads and keeps the sync identity in this file, but it does not " +
-                        "open a live connection to the phone relay. Use Backup & Restore to move the " +
-                        "library between devices.",
+                    text = "The Device Sync screen opens the live relay connection. The pairing " +
+                        "identity is preserved here across restarts, so a paired phone reconnects " +
+                        "without a new QR code.",
                     style = MaterialTheme.typography.bodySmall,
                     color = colors.onSurfaceVariant
                 )

@@ -45,6 +45,12 @@ Il flusso è questo:
    Un redeploy su free tier azzera il filesystem: in quel caso i dispositivi si
    riaccoppiano semplicemente.
 
+Il relay manda anche `presence` al peer appena un dispositivo apre il socket e
+quando lo chiude, così la schermata Device Sync mostra online/offline senza
+aspettare uno snapshot. Il relay gratuito Render può svegliarsi lentamente: il
+client aspetta fino a 75 secondi e riprova, non considera morto un servizio che
+sta partendo.
+
 **Sicurezza (fase attuale):** il traffico è protetto **solo da TLS** (terminato dal
 provider davanti a questo processo). Il relay **vede** i dati in chiaro. È la scelta
 che abbiamo concordato per partire; la cifratura end-to-end arriverà in una fase
@@ -123,6 +129,7 @@ Messaggi JSON, un solo envelope generico:
 | `sync_pull` | C→S | chiede l'ultimo snapshot del peer |
 | `sync` | S→C | snapshot inoltrato dal peer |
 | `no_snapshot` | S→C | nessuno snapshot disponibile |
+| `presence` | S→C | il peer è online/offline (`online: true/false`) |
 | `unpair` | C→S | scioglie la coppia |
 | `pair_error` | S→C | errore (codice scaduto, non accoppiato, …) |
 | `ping` / `pong` | C↔S | keep-alive |

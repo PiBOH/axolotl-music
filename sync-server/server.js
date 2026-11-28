@@ -38,6 +38,10 @@ try {
 } catch (_) {
   /* first run — start empty */
 }
+// A file written by an older/corrupt build must not make every handler throw.
+state.devices = state.devices || {};
+state.pairs = state.pairs || {};
+state.mailboxes = state.mailboxes || {};
 
 // Runtime-only state (never persisted)
 const sockets = {};       // deviceId -> ws
@@ -67,6 +71,22 @@ function peerOf(deviceId) {
   return pair.a === deviceId ? pair.b : pair.a;
 }
 
+function presence(deviceId, online) {
+  return {
+    type: 'presence',
+    deviceId,
+    deviceName: (state.devices[deviceId] && state.devices[deviceId].name) || 'Device',
+    online: !!online,
+    timestampMs: Date.now(),
+  };
+}
+
+/** Tells the paired peer that [deviceId] opened or closed its socket. */
+function sendPresence(deviceId, online) {
+  const peer = peerOf(deviceId);
+  if (peer && sockets[peer]) send(sockets[peer], presence(deviceId, online));
+}
+
 function generateCode() {
   let code;
   do {
@@ -88,7 +108,9 @@ function onMessage(ws, raw) {
   }
   if (!msg || !msg.deviceId) return;
 
-  // Remember which socket belongs to this device (lazy registration).
+  // Remember which socket belongs to this device (lazy registration). The
+  // first envelope is the device coming online, so the peer can show it.
+  const wasOnline = sockets[msg.deviceId] === ws;
   sockets[msg.deviceId] = ws;
   ws._deviceId = msg.deviceId;
   // A live message means the device is (back) online: cancel any pending unpair.
@@ -101,6 +123,14 @@ function onMessage(ws, raw) {
     persist();
   } else if (msg.deviceName) {
     state.devices[msg.deviceId].name = msg.deviceName;
+  }
+
+  if (!wasOnline) {
+    sendPresence(msg.deviceId, true);
+    // The device that just woke up also needs the peer's current state; a
+    // presence message is the only thing that can tell it before a snapshot.
+    const peer = peerOf(msg.deviceId);
+    if (peer && sockets[peer]) send(ws, presence(peer, true));
   }
 
   switch (msg.type) {
@@ -159,13 +189,21 @@ function handlePairJoin(ws, msg) {
     pairId,
     peerDeviceId: b,
     peerDeviceName: state.devices[b].name,
+    online: !!sockets[b],
   });
   send(ws, {
     type: 'pair_joined',
     pairId,
     peerDeviceId: a,
     peerDeviceName: state.devices[a].name,
+    online: !!sockets[a],
   });
+
+  // Both sockets existed before the pair did, so neither got a presence
+  // message at registration. Send the current state now, or a freshly paired
+  // phone shows the desktop as offline until the next snapshot.
+  sendPresence(a, true);
+  sendPresence(b, true);
 }
 
 function handleSyncPush(ws, msg) {
@@ -220,6 +258,7 @@ function handleDisconnect(ws) {
   if (!deviceId) return;
   if (sockets[deviceId] !== ws) return;
   delete sockets[deviceId];
+  sendPresence(deviceId, false);
   if (pendingDisconnects[deviceId]) clearTimeout(pendingDisconnects[deviceId]);
   pendingDisconnects[deviceId] = setTimeout(() => {
     delete pendingDisconnects[deviceId];

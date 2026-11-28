@@ -23,6 +23,7 @@ data class SyncIdentity(
     val deviceName: String,
     val pairId: String,
     val serverUrl: String,
+    val sharingEnabled: Boolean = true,
 )
 
 object SyncIdentityStore {
@@ -41,6 +42,8 @@ object SyncIdentityStore {
                 ?: defaultDeviceName(),
             pairId = root["pairId"]?.jsonPrimitive?.contentOrNullSafe().orEmpty(),
             serverUrl = root["serverUrl"]?.jsonPrimitive?.contentOrNullSafe().orEmpty(),
+            sharingEnabled = root["syncSharingEnabled"]?.jsonPrimitive?.contentOrNullSafe()
+                ?.toBooleanStrictOrNull() ?: true,
         )
     }
 
@@ -54,6 +57,7 @@ object SyncIdentityStore {
                 .putString("deviceName", updated.deviceName)
                 .putString("pairId", updated.pairId)
                 .putString("serverUrl", updated.serverUrl)
+                .putString("syncSharingEnabled", updated.sharingEnabled.toString())
         )
         updated
     }

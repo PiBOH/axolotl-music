@@ -28,8 +28,13 @@ class FavoritesDao(
             .map { it.songId }
     }
 
-    suspend fun addFavorite(songId: String) = withContext(ioDispatcher) {
-        val now = System.currentTimeMillis()
+    /** When each liked song was liked, for the device-sync last-write-wins key. */
+    suspend fun getFavoriteDates(): Map<String, Long> = withContext(ioDispatcher) {
+        store.load().favorites.associate { it.songId to it.dateAdded }
+    }
+
+    suspend fun addFavorite(songId: String, likedAt: Long = System.currentTimeMillis()) = withContext(ioDispatcher) {
+        val now = likedAt.coerceAtLeast(1L)
         store.update("favorites", "songs") { state ->
             state.copy(
                 favorites = state.favorites.filterNot { it.songId == songId } +

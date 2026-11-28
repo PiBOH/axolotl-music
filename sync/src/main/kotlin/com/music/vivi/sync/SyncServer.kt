@@ -8,15 +8,17 @@ package com.music.vivi.sync
 /**
  * Default relay endpoint for device sync (Android app + desktop edition).
  *
- * NOTE: `sync-server/` must be deployed first (Render / Hugging Face). This
- * hostname currently has NO running service (Render answers with
- * "x-render-routing: no-server"), so pairing fails with "Connection failed"
- * until the relay is actually deployed. Once live, replace this value with the
- * real generated URL. It can also be overridden at runtime:
+ * This is the only production relay. It is a Render free-tier service and can
+ * sleep, so the first handshake may take most of a minute; [SyncClient] keeps
+ * a 75 s connect timeout and reconnects instead of treating the wake-up as a
+ * dead endpoint. It can still be overridden at runtime:
  * `DeviceSyncServerUrlKey` (Android) or the desktop "Relay server" field.
  */
 object SyncServer {
     const val DEFAULT_URL = "wss://vivimusic-device-sync.onrender.com"
+
+    /** HTTP health endpoint, useful to wake the free relay before pairing. */
+    const val HEALTH_URL = "https://vivimusic-device-sync.onrender.com/health"
 
     /**
      * While a player is playing, re-push its position every this many millis so

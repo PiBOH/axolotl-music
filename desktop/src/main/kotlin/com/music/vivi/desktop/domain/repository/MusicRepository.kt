@@ -83,9 +83,11 @@ interface MusicRepository {
     suspend fun exportPlaylistToM3u(playlistId: String, targetFile: File): Result<Unit>
 
     fun getFavoriteSongsFlow(): Flow<List<Song>>
+    /** Epoch millis when each liked song was liked, for device-sync LWW. */
+    suspend fun getFavoriteDates(): Map<String, Long>
     suspend fun isFavorite(songId: String): Boolean
     suspend fun toggleFavorite(songId: String): Boolean
-    suspend fun setFavorite(songId: String, isFavorite: Boolean)
+    suspend fun setFavorite(songId: String, isFavorite: Boolean, likedAt: Long = 0L)
 
     fun getRecentlyPlayedSongsFlow(limit: Int = 500): Flow<List<Song>>
     suspend fun recordSongPlayed(songId: String, durationMs: Long = 0L)

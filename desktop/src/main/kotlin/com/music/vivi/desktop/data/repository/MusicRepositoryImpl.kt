@@ -410,6 +410,8 @@ class MusicRepositoryImpl(
         }
     }.flowOn(ioDispatcher)
 
+    override suspend fun getFavoriteDates(): Map<String, Long> = favoritesDao.getFavoriteDates()
+
     override suspend fun isFavorite(songId: String): Boolean {
         return favoritesDao.isFavorite(songId)
     }
@@ -418,9 +420,9 @@ class MusicRepositoryImpl(
         return favoritesDao.toggleFavorite(songId)
     }
 
-    override suspend fun setFavorite(songId: String, isFavorite: Boolean) {
+    override suspend fun setFavorite(songId: String, isFavorite: Boolean, likedAt: Long) {
         if (isFavorite) {
-            favoritesDao.addFavorite(songId)
+            favoritesDao.addFavorite(songId, if (likedAt > 0L) likedAt else System.currentTimeMillis())
         } else {
             favoritesDao.removeFavorite(songId)
         }

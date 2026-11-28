@@ -81,6 +81,8 @@ fun DeviceSyncScreen(
     val lanAddress by manager.lanAddress.collectAsState()
     val peerDeviceName by manager.peerDeviceName.collectAsState()
     val peerDeviceId by manager.peerDeviceId.collectAsState()
+    val peerOnline by manager.peerOnline.collectAsState()
+    val sharingEnabled by manager.sharingEnabled.collectAsState()
     val logs by manager.logs.collectAsState()
 
     val syncVolume by viewModel.deviceSyncViviVolume.collectAsState()
@@ -151,9 +153,12 @@ fun DeviceSyncScreen(
                         connectionState = connectionState,
                         peerDeviceName = peerDeviceName,
                         peerDeviceId = peerDeviceId,
+                        peerOnline = peerOnline,
+                        sharingEnabled = sharingEnabled,
                         desktopName = manager.deviceName,
                         desktopId = manager.deviceId,
                         logs = logs,
+                        onToggleSharing = { manager.setSharingEnabled(!sharingEnabled) },
                         onGenerate = {
                             pairingRequested = true
                             manager.beginPairing(mode, relayUrl)
@@ -190,9 +195,12 @@ fun DeviceSyncScreen(
                         connectionState = connectionState,
                         peerDeviceName = peerDeviceName,
                         peerDeviceId = peerDeviceId,
+                        peerOnline = peerOnline,
+                        sharingEnabled = sharingEnabled,
                         desktopName = manager.deviceName,
                         desktopId = manager.deviceId,
                         logs = logs,
+                        onToggleSharing = { manager.setSharingEnabled(!sharingEnabled) },
                         onGenerate = {
                             pairingRequested = true
                             manager.beginPairing(mode, relayUrl)
@@ -363,11 +371,14 @@ private fun PairingCard(
     connectionState: SyncConnectionState,
     peerDeviceName: String,
     peerDeviceId: String,
+    peerOnline: Boolean,
+    sharingEnabled: Boolean,
     desktopName: String,
     desktopId: String,
     logs: List<com.music.vivi.desktop.data.sync.SyncLogLine>,
     onGenerate: () -> Unit,
     onReset: () -> Unit,
+    onToggleSharing: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -381,9 +392,12 @@ private fun PairingCard(
                 paired -> PairedTerminal(
                     peerDeviceName = peerDeviceName,
                     peerDeviceId = peerDeviceId,
+                    peerOnline = peerOnline,
+                    sharingEnabled = sharingEnabled,
                     desktopName = desktopName,
                     desktopId = desktopId,
                     logs = logs,
+                    onToggleSharing = onToggleSharing,
                     onDisconnect = onReset,
                 )
                 pairingRequested -> PairingQr(
@@ -454,9 +468,12 @@ private fun PairingQr(
 private fun PairedTerminal(
     peerDeviceName: String,
     peerDeviceId: String,
+    peerOnline: Boolean,
+    sharingEnabled: Boolean,
     desktopName: String,
     desktopId: String,
     logs: List<com.music.vivi.desktop.data.sync.SyncLogLine>,
+    onToggleSharing: () -> Unit,
     onDisconnect: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -471,7 +488,16 @@ private fun PairedTerminal(
             name = peerDeviceName.ifBlank { "APK Android" },
             id = peerDeviceId,
             isDesktop = false,
-            connected = true,
+            connected = peerOnline,
+        )
+        Text(
+            text = when {
+                !peerOnline -> "Phone offline — open the Android app to reconnect"
+                sharingEnabled -> "Phone online · sharing playback, settings and library"
+                else -> "Phone online · sharing is paused"
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = if (peerOnline) colors.primary else colors.onSurfaceVariant,
         )
 
         Surface(
@@ -506,9 +532,18 @@ private fun PairedTerminal(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            TextButton(onClick = onDisconnect) { Text("Disconnect") }
+            Spacer(Modifier.weight(1f))
+            AppTooltip(if (sharingEnabled) "Stop sharing" else "Start sharing") {
+                TextButton(onClick = onToggleSharing) {
+                    Text(if (sharingEnabled) "Stop sharing" else "Start sharing")
+                }
+            }
+            AppTooltip("Disconnect") {
+                TextButton(onClick = onDisconnect) { Text("Disconnect") }
+            }
         }
     }
 }

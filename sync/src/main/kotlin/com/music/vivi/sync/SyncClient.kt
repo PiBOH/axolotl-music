@@ -34,8 +34,20 @@ sealed class SyncEvent {
     data object Connected : SyncEvent()
     data object Disconnected : SyncEvent()
     data class PairCode(val code: String) : SyncEvent()
-    data class Paired(val pairId: String, val peerDeviceId: String, val peerDeviceName: String) : SyncEvent()
+    data class Paired(
+        val pairId: String,
+        val peerDeviceId: String,
+        val peerDeviceName: String,
+        val peerOnline: Boolean = true,
+    ) : SyncEvent()
     data class SnapshotReceived(val fromDeviceId: String, val snapshot: SyncSnapshot) : SyncEvent()
+
+    /** The paired peer opened or closed its relay socket. */
+    data class Presence(
+        val deviceId: String,
+        val deviceName: String,
+        val online: Boolean,
+    ) : SyncEvent()
 
     /** Server confirmed the device is paired but the peer has not pushed a snapshot yet. */
     data object NoSnapshot : SyncEvent()
@@ -58,8 +70,11 @@ class SyncClient(
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     private val httpClient = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
+        // Render's free tier sleeps; the first WebSocket handshake can take
+        // most of a minute while the service wakes. A 30 s timeout made the
+        // client give up on a relay that was coming up and report it dead.
+        .connectTimeout(75, TimeUnit.SECONDS)
+        .readTimeout(90, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .pingInterval(30, TimeUnit.SECONDS)
         .build()
@@ -213,6 +228,7 @@ class SyncClient(
                             pairId = envelope.pairId ?: "",
                             peerDeviceId = envelope.peerDeviceId ?: "",
                             peerDeviceName = envelope.peerDeviceName ?: "",
+                            peerOnline = envelope.online ?: true,
                         )
                     )
                 }
@@ -251,6 +267,17 @@ class SyncClient(
             }
             SyncMessageTypes.NO_SNAPSHOT -> {
                 scope.launch { _events.emit(SyncEvent.NoSnapshot) }
+            }
+            SyncMessageTypes.PRESENCE -> {
+                scope.launch {
+                    _events.emit(
+                        SyncEvent.Presence(
+                            deviceId = envelope.deviceId.orEmpty(),
+                            deviceName = envelope.deviceName.orEmpty(),
+                            online = envelope.online == true,
+                        )
+                    )
+                }
             }
             else -> Unit
         }

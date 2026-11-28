@@ -269,7 +269,7 @@ val stateModule: Module = module {
     single {
         YouTubeAccountStateHolder(coroutineScope = get())
     }
-    single { DesktopSyncManager() }
+    single { DesktopSyncManager(musicRepository = get(), settingsRepository = get()) }
     single {
         PlayerViewModel(
             playbackStateHolder = get(),

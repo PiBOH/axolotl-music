@@ -164,11 +164,29 @@ class LanSyncRelay {
                 val envelope = runCatching { json.decodeFromString<SyncEnvelope>(frame.readText()) }.getOrNull() ?: continue
                 val id = envelope.deviceId ?: continue
                 deviceId = id
+                val wasOnline = sockets[id] === session
                 sockets[id] = session
                 // The device is (back) online: cancel any pending unpair.
                 pendingDisconnects.remove(id)?.cancel()
                 devicePair.putIfAbsent(id, "")
                 envelope.deviceName?.takeIf { it.isNotBlank() }?.let { deviceNames[id] = it }
+                if (!wasOnline) {
+                    sendPresence(id, true)
+                    peerOf(id)?.let { peer ->
+                        if (sockets[peer] != null) {
+                            // Tell the new socket the peer is online too.
+                            send(
+                                session,
+                                SyncEnvelope(
+                                    type = SyncMessageTypes.PRESENCE,
+                                    deviceId = peer,
+                                    deviceName = deviceName(peer),
+                                    online = true,
+                                ),
+                            )
+                        }
+                    }
+                }
                 handle(envelope, session)
             }
         } catch (_: Exception) {
@@ -231,9 +249,27 @@ class LanSyncRelay {
         devicePair[joiner] = pairId
 
         sockets[requester]?.let {
-            send(it, SyncEnvelope(type = SyncMessageTypes.PAIR_JOINED, pairId = pairId, peerDeviceId = joiner, peerDeviceName = deviceName(joiner)))
+            send(
+                it,
+                SyncEnvelope(
+                    type = SyncMessageTypes.PAIR_JOINED,
+                    pairId = pairId,
+                    peerDeviceId = joiner,
+                    peerDeviceName = deviceName(joiner),
+                    online = sockets[joiner] != null,
+                ),
+            )
         }
-        send(session, SyncEnvelope(type = SyncMessageTypes.PAIR_JOINED, pairId = pairId, peerDeviceId = requester, peerDeviceName = deviceName(requester)))
+        send(
+            session,
+            SyncEnvelope(
+                type = SyncMessageTypes.PAIR_JOINED,
+                pairId = pairId,
+                peerDeviceId = requester,
+                peerDeviceName = deviceName(requester),
+                online = sockets[requester] != null,
+            ),
+        )
     }
 
     private suspend fun handleSyncPush(msg: SyncEnvelope) {
@@ -277,6 +313,7 @@ class LanSyncRelay {
     private fun onSocketClosed(deviceId: String, session: WebSocketSession) {
         if (sockets[deviceId] !== session) return
         sockets.remove(deviceId)
+        scope.launch { sendPresence(deviceId, false) }
         val job = scope.launch {
             delay(UNPAIR_GRACE_MS)
             if (sockets.containsKey(deviceId)) return@launch // reconnected
@@ -325,6 +362,21 @@ class LanSyncRelay {
         if (pairId.isEmpty()) return null
         val pair = pairs[pairId] ?: return null
         return if (pair.first == deviceId) pair.second else pair.first
+    }
+
+    private suspend fun sendPresence(deviceId: String, online: Boolean) {
+        val peer = peerOf(deviceId) ?: return
+        sockets[peer]?.let { session ->
+            send(
+                session,
+                SyncEnvelope(
+                    type = SyncMessageTypes.PRESENCE,
+                    deviceId = deviceId,
+                    deviceName = deviceName(deviceId),
+                    online = online,
+                ),
+            )
+        }
     }
 
     private fun deviceName(deviceId: String): String = deviceNames[deviceId] ?: "Device"

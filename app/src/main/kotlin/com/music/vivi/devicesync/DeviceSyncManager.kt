@@ -509,6 +509,11 @@ class DeviceSyncManager @Inject constructor(
                 pushCurrentSnapshot()
             }
             is SyncEvent.SnapshotReceived -> applySnapshot(event.snapshot)
+            is SyncEvent.Presence -> {
+                event.deviceName.takeIf { it.isNotBlank() }?.let { _peerDeviceName.value = it }
+                _status.value = if (event.online) "Peer online" else "Peer offline"
+                Timber.d("DeviceSync: peer '%s' is %s", event.deviceName, if (event.online) "online" else "offline")
+            }
             is SyncEvent.Disconnected -> {
                 _status.value = "Disconnected"
                 Timber.d("DeviceSync: link disconnected from the relay")
