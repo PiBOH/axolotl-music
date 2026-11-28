@@ -1,0 +1,25 @@
+{
+  "version": "6.0.8.11",
+  "versionCode": 149,
+  "channel": "beta",
+  "title": "v6.0.8.11_DE-1.56.0-beta10:",
+  "builtAt": "2026-11-28T19:43:23Z",
+  "commit": "baa37ed403bc7c5864d78128de0846968cd75d3e",
+  "files": [
+    {
+      "name": "vivi-gms.apk",
+      "sizeBytes": 31653590,
+      "url": "https://raw.githubusercontent.com/PiBOH/axolotl-music/apk-latest/.releases/apk/latest/vivi-gms.apk"
+    },
+    {
+      "name": "vivi-foss.apk",
+      "sizeBytes": 30135148,
+      "url": "https://raw.githubusercontent.com/PiBOH/axolotl-music/apk-latest/.releases/apk/latest/vivi-foss.apk"
+    },
+    {
+      "name": "vivi-gsm.apk",
+      "sizeBytes": 31653590,
+      "url": "https://raw.githubusercontent.com/PiBOH/axolotl-music/apk-latest/.releases/apk/latest/vivi-gms.apk"
+    }
+  ]
+}
