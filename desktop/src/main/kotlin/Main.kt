@@ -233,6 +233,10 @@ fun main(args: Array<String> = emptyArray()) {
     // Proves the imported playback, history, queue, lyrics and Listen Together
     // paths with the real graph instead of a compile.
     com.music.vivi.desktop.dev.ImportedFeaturesCheck.handle(args)
+    // Two real desktop managers against the production relay, each on its own
+    // state directory: pairing, presence, playback/settings/library, the
+    // sharing gate and a restart from the saved pair.
+    com.music.vivi.desktop.dev.DeviceSyncE2ECheck.handle(args)
     // Fills the same JSON store with the small Album/Playlist fixture used by the
     // visual checks, then exits before a window exists.
     DemoLibrarySeed.handle(args)

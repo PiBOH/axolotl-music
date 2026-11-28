@@ -13,6 +13,7 @@ import com.music.vivi.sync.SyncEvent
 import com.music.vivi.sync.SyncSnapshot
 import com.music.vivi.sync.SyncedPlaylist
 import com.music.vivi.sync.SyncedSong
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -20,6 +21,7 @@ import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,10 +59,17 @@ data class SyncLogLine(val at: Long, val text: String)
 class DesktopSyncManager(
     private val musicRepository: MusicRepository? = null,
     private val settingsRepository: SettingsRepository? = null,
+    /**
+     * The identity file this manager owns. The running app leaves it null and
+     * uses the shared installation file; the two-client harness passes one per
+     * client, so both can live in one JVM without sharing a device id or pair.
+     */
+    identityFile: File? = null,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val relay = LanSyncRelay()
-    private val identity = SyncIdentityStore.load()
+    private val identityStore = identityFile?.let(::SyncIdentityFile) ?: SyncIdentityStore.defaultStore
+    private val identity = identityStore.load()
 
     val deviceId: String = identity.deviceId
     val deviceName: String = identity.deviceName
@@ -203,7 +212,7 @@ class DesktopSyncManager(
         scope.launch { created.events.collect { handleEvent(it) } }
         created.connect()
         if (!url.startsWith("ws://localhost")) {
-            SyncIdentityStore.update { it.copy(serverUrl = url) }
+            identityStore.update { it.copy(serverUrl = url) }
         }
     }
 
@@ -301,7 +310,7 @@ class DesktopSyncManager(
     fun setSharingEnabled(enabled: Boolean) {
         if (_sharingEnabled.value == enabled) return
         _sharingEnabled.value = enabled
-        SyncIdentityStore.update { it.copy(sharingEnabled = enabled) }
+        identityStore.update { it.copy(sharingEnabled = enabled) }
         log("CFG", if (enabled) "sharing resumed" else "sharing stopped")
         if (enabled) pushSnapshot(force = true)
     }
@@ -309,10 +318,11 @@ class DesktopSyncManager(
     fun shutdown() {
         runCatching { client?.disconnect() }
         runCatching { relay.shutdownNotify() }
+        scope.cancel()
     }
 
     private fun clearPairing() {
-        SyncIdentityStore.update { it.copy(pairId = "") }
+        identityStore.update { it.copy(pairId = "") }
         _paired.value = false
         pairingRequested = false
         _peerOnline.value = false
@@ -392,7 +402,7 @@ class DesktopSyncManager(
     // ---------------------------------------------------------------------
 
     private fun restoreSavedConnection() {
-        val saved = SyncIdentityStore.load()
+        val saved = identityStore.load()
         if (saved.pairId.isBlank() || saved.serverUrl.isBlank()) return
         // A LAN relay gets a new ephemeral port on every start; its saved
         // localhost URL is stale. The phone has to rescan, so do not dial it.
@@ -633,7 +643,7 @@ class DesktopSyncManager(
     private fun ensureConnected() {
         val c = client
         if (c == null) {
-            val saved = SyncIdentityStore.load().serverUrl
+            val saved = identityStore.load().serverUrl
             if (saved.isNotBlank()) connect(saved)
             return
         }
@@ -708,7 +718,7 @@ class DesktopSyncManager(
                 _peerOnline.value = event.peerOnline
                 _peerDeviceName.value = event.peerDeviceName.ifBlank { "APK Android" }
                 _peerDeviceId.value = event.peerDeviceId
-                SyncIdentityStore.update { it.copy(pairId = event.pairId) }
+                identityStore.update { it.copy(pairId = event.pairId) }
                 _status.value = "Paired with ${_peerDeviceName.value}"
                 log("PAIR", "pair_joined peer='${_peerDeviceName.value}' (${event.peerDeviceId})")
                 pushSnapshot(force = true)
@@ -788,7 +798,7 @@ class DesktopSyncManager(
                     _pairCodeExpiresAt.value = 0L
                     _peerDeviceName.value = ""
                     _peerDeviceId.value = ""
-                    SyncIdentityStore.update { it.copy(pairId = "") }
+                    identityStore.update { it.copy(pairId = "") }
                 } else {
                     log("ERR", event.message)
                 }

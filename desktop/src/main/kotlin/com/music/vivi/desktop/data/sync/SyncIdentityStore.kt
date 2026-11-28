@@ -5,7 +5,9 @@ import java.io.File
 import java.util.UUID
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 
@@ -26,7 +28,12 @@ data class SyncIdentity(
     val sharingEnabled: Boolean = true,
 )
 
-object SyncIdentityStore {
+/**
+ * One identity file. The app uses the default [SyncIdentityStore], while the
+ * end-to-end harness gives each of its two desktop clients its own instance and
+ * therefore its own device identity and saved pair.
+ */
+class SyncIdentityFile(private val file: File) {
     private val lock = Any()
     private val json = Json { ignoreUnknownKeys = true; prettyPrint = true }
 
@@ -63,7 +70,6 @@ object SyncIdentityStore {
     }
 
     private fun readRoot(): JsonObject {
-        val file = DesktopPathProvider.syncStateFile
         if (!file.isFile) return buildJsonObject { }
         return runCatching {
             json.parseToJsonElement(file.readText(Charsets.UTF_8)) as? JsonObject
@@ -71,7 +77,6 @@ object SyncIdentityStore {
     }
 
     private fun writeRoot(root: JsonObject) {
-        val file = DesktopPathProvider.syncStateFile
         val parent = file.parentFile
         parent?.mkdirs()
         val temp = File(parent, "${file.name}.sync.tmp")
@@ -84,13 +89,24 @@ object SyncIdentityStore {
     }
 
     private fun JsonObject.putString(key: String, value: String): JsonObject =
-        JsonObject(toMutableMap().apply { put(key, kotlinx.serialization.json.JsonPrimitive(value)) })
+        JsonObject(toMutableMap().apply { put(key, JsonPrimitive(value)) })
 
-    private fun kotlinx.serialization.json.JsonPrimitive.contentOrNullSafe(): String? =
-        runCatching { content }.getOrNull()
-
-    private fun defaultDeviceName(): String = runCatching {
-        val env = System.getenv("COMPUTERNAME") ?: System.getenv("HOSTNAME")
-        if (!env.isNullOrBlank()) env else java.net.InetAddress.getLocalHost().hostName
-    }.getOrDefault("Desktop").ifBlank { "Desktop" }
+    private fun JsonPrimitive.contentOrNullSafe(): String? =
+        runCatching { contentOrNull }.getOrNull()
 }
+
+/** The one identity file the running desktop uses. */
+object SyncIdentityStore {
+    internal val defaultStore: SyncIdentityFile by lazy {
+        SyncIdentityFile(DesktopPathProvider.syncStateFile)
+    }
+
+    fun load(): SyncIdentity = defaultStore.load()
+
+    fun update(transform: (SyncIdentity) -> SyncIdentity): SyncIdentity = defaultStore.update(transform)
+}
+
+private fun defaultDeviceName(): String = runCatching {
+    val env = System.getenv("COMPUTERNAME") ?: System.getenv("HOSTNAME")
+    if (!env.isNullOrBlank()) env else java.net.InetAddress.getLocalHost().hostName
+}.getOrDefault("Desktop").ifBlank { "Desktop" }

@@ -1,5 +1,21 @@
 ## [Unreleased]
 
+## [6.0.8.11_DE-1.56.0-beta9] - 2026-11-28
+
+### ✨ Added
+
+- [DE] **Device Sync has an executable two-client proof against the real relay.** `--device-sync-e2e-check` instantiates the same `DesktopSyncManager` the window uses twice, each with its own `device-sync.json`, JSON library store and `settings.json`, and drives the production `wss://vivimusic-device-sync.onrender.com` with no mock relay or alternate URL. It asserts both connections, the code pairing, bilateral presence, a playback snapshot A→B (track, position and playing state), dark mode A→B, a playlist A→B with exactly one copy, Stop sharing blocking playback/settings/library while the pair stays connected and B→A still works, Start sharing resuming, and a restart that reloads the saved pair and syncs again without a new code. **Measured on 28 Nov:** three runs printed `RESULT: PASS` (two through `:desktop:run` and one through the packaged `AxolotlMusic.exe`); the second run reported `A state=CONNECTED B state=CONNECTED code=608785`, `paired A=true B=true online A=true B=true`, `B received ... pos=42000`, `B darkMode=false`, `B playlist='E2E Sync Playlist v2' copies=1`, `B still paired=true connected=CONNECTED` while sharing was stopped, `B received resumed track and darkMode=true`, and `reconnected pair=78d73e38-... code='' B got after-restart playback`.
+- [DE] **A desktop manager can own its identity file.** `SyncIdentityFile` is the per-file store behind the unchanged `SyncIdentityStore` singleton; `DesktopSyncManager` accepts an optional `identityFile`, so the harness can run two real clients in one JVM without sharing a device id or pair. The default installation path and the flat 1.55 keys are unchanged.
+
+### 🔧 Changed
+
+- [DE] **The beta9 Windows package carries the end-to-end check and its runtime.** `:desktop:createDistributable` and `:desktop:windowsInstaller` are green: the app folder is 395 MB (`desktop/build/compose/binaries/main/app/AxolotlMusic`, launcher `AxolotlMusic.exe` 790,016 bytes) and the Inno Setup 7.1.0 installer is `build/installer/AxolotlMusic-6.0.8.11_DE-1.56.0-beta9-setup.exe`, 232,644,956 bytes, SHA-256 `9031fe14e0132c2a42d4adac38fd9a3138c86533b762a403f31d0f8e8bee10e5`. **Measured on 28 Nov:** `./gradlew test` finished with BUILD SUCCESSFUL (133 tests, 1 skipped) and `:desktop:test` has 100 tests, 0 failures.
+- [DE] **Shutting a manager down also stops its observers.** `shutdown()` cancels the manager's coroutine scope after disconnecting the relay client, so the replaced manager in the restart phase cannot keep collecting settings or library changes.
+
+### 🐛 Fixed
+
+- [DE] **The stop-sharing gate is verified on the real cloud, not only in unit code.** With A's sharing switched off, B received no blocked playback, no blocked dark-mode change and no blocked playlist, while both `paired` flags stayed true, both connections stayed `CONNECTED`, and B→A playback still arrived; switching sharing back on delivered the next track and settings.
+
 ## [6.0.8.11_DE-1.56.0-beta8] - 2026-11-28
 
 ### ✨ Added

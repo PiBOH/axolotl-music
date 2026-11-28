@@ -1,5 +1,21 @@
 ## [Unreleased]
 
+## [6.0.8.11_DE-1.56.0-beta9] - 2026-11-28
+
+### ✨ Added
+
+- [DE] **Device Sync has an executable two-client proof against the real relay.**
+- [DE] **A desktop manager can own its identity file.**
+
+### 🔧 Changed
+
+- [DE] **The beta9 Windows package carries the end-to-end check and its runtime.**
+- [DE] **Shutting a manager down also stops its observers.**
+
+### 🐛 Fixed
+
+- [DE] **The stop-sharing gate is verified on the real cloud, not only in unit code.**
+
 ## [6.0.8.11_DE-1.56.0-beta8] - 2026-11-28
 
 ### ✨ Added
