@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledTonalButton
@@ -48,6 +49,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -89,6 +91,11 @@ import com.music.vivi.desktop.utils.DirectoryPicker
 
 private data class PlaylistSongUiItem(val stableKey: String, val song: Song)
 
+private data class PlaylistSongLookup(
+    val songsById: Map<String, Song> = emptyMap(),
+    val isLoading: Boolean = false
+)
+
 @Composable
 fun PlaylistDetailScreen(
     playlistId: String,
@@ -102,6 +109,7 @@ fun PlaylistDetailScreen(
     val colors = MaterialTheme.colorScheme
     val playlists by viewModel.playlists.collectAsState()
     val allSongs by viewModel.songs.collectAsState()
+    val catalogueSongs by viewModel.catalogueSongs.collectAsState()
     val currentSong by viewModel.currentSong.collectAsState()
     val playerInfo by viewModel.playerInfo.collectAsState()
 
@@ -141,8 +149,30 @@ fun PlaylistDetailScreen(
         return
     }
 
-    val songMap = remember(allSongs) {
-        allSongs.associateBy { it.id }
+    val librarySongMap = remember(allSongs, catalogueSongs) {
+        buildMap(allSongs.size + catalogueSongs.size) {
+            allSongs.forEach { put(it.id, it) }
+            catalogueSongs.forEach { putIfAbsent(it.id, it) }
+        }
+    }
+    val missingIds = remember(playlist.songIds, librarySongMap) {
+        playlist.songIds.filterNot(librarySongMap::containsKey)
+    }
+    val lookup by produceState(
+        initialValue = PlaylistSongLookup(isLoading = missingIds.isNotEmpty()),
+        playlist.songIds,
+        missingIds
+    ) {
+        if (missingIds.isEmpty()) {
+            value = PlaylistSongLookup()
+            return@produceState
+        }
+        value = PlaylistSongLookup(isLoading = true)
+        val resolved = viewModel.resolvePlaylistSongs(missingIds).associateBy { it.id }
+        value = PlaylistSongLookup(songsById = resolved, isLoading = false)
+    }
+    val songMap = remember(librarySongMap, lookup.songsById) {
+        librarySongMap + lookup.songsById
     }
 
     var localSongs by remember(playlist.songIds, songMap) {
@@ -449,14 +479,26 @@ fun PlaylistDetailScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Icon(
-                            painter = painterResource(Res.drawable.ic_rounded_music_note),
-                            contentDescription = null,
-                            tint = colors.onSurfaceVariant.copy(alpha = 0.4f),
-                            modifier = Modifier.size(56.dp)
-                        )
+                        if (lookup.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(36.dp),
+                                strokeWidth = 3.dp,
+                                color = colors.primary
+                            )
+                        } else {
+                            Icon(
+                                painter = painterResource(Res.drawable.ic_rounded_music_note),
+                                contentDescription = null,
+                                tint = colors.onSurfaceVariant.copy(alpha = 0.4f),
+                                modifier = Modifier.size(56.dp)
+                            )
+                        }
                         Text(
-                            text = "Playlist is empty",
+                            text = when {
+                                playlist.songIds.isEmpty() -> "Playlist is empty"
+                                lookup.isLoading -> "Loading playlist tracks..."
+                                else -> "These playlist tracks are not available"
+                            },
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = colors.onSurfaceVariant

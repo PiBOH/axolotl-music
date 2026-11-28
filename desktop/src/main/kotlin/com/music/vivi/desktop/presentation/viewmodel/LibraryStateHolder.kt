@@ -1,6 +1,7 @@
 package com.music.vivi.desktop.presentation.viewmodel
 
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +15,12 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 
 import com.music.vivi.desktop.data.metadata.AudioMetadataDetails
 import com.music.vivi.desktop.data.metadata.BatchMetadataResult
@@ -37,6 +43,9 @@ import com.music.vivi.desktop.data.preferences.LyricsSourcePreference
 import com.music.vivi.desktop.data.scanner.DesktopMusicScanner
 import com.music.vivi.desktop.data.scanner.ScanProgress
 import com.music.vivi.desktop.data.watcher.LibraryWatcherService
+import com.music.vivi.desktop.data.youtube.YouTubePlaylistsRepository
+import com.music.vivi.desktop.data.youtube.accountPlaylistLocalId
+import com.music.vivi.desktop.data.youtube.buildImportedPlaylist
 import com.music.vivi.desktop.domain.repository.LyricsRepository
 import com.music.vivi.desktop.domain.repository.MusicRepository
 import com.music.vivi.desktop.domain.repository.SettingsRepository
@@ -52,8 +61,12 @@ class LibraryStateHolder(
     private val scanner: DesktopMusicScanner,
     private val lyricsRepository: LyricsRepository? = null,
     private val coroutineScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default),
-    private val watcherService: LibraryWatcherService? = null
+    private val watcherService: LibraryWatcherService? = null,
+    /** The account playlist reader, used by the one-time-per-session mirror. */
+    private val youtubePlaylistsRepository: YouTubePlaylistsRepository? = null
 ) {
+
+    private val accountImportsInFlight = ConcurrentHashMap.newKeySet<String>()
 
     init {
         watcherService?.start()
@@ -220,6 +233,10 @@ class LibraryStateHolder(
     val playlists: StateFlow<List<Playlist>> = _playlistSortOption.flatMapLatest { sort ->
         musicRepository.getAllPlaylistsFlow(sort)
     }.stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
+
+    /** Metadata of catalogue tracks that playlists point at, never the library. */
+    val catalogueSongs: StateFlow<List<Song>> = musicRepository.getCatalogueSongsFlow()
+        .stateIn(coroutineScope, SharingStarted.Lazily, emptyList())
 
     val favoriteSongs: StateFlow<List<Song>> = combine(
         musicRepository.getFavoriteSongsFlow(),
@@ -605,6 +622,51 @@ class LibraryStateHolder(
         coroutineScope.launch {
             musicRepository.restoreIgnoredDuplicateGroups()
         }
+    }
+
+    /**
+     * Mirrors every playlist of [accountId] into the local library. Stable ids
+     * make a restart or a re-login update the same row instead of duplicating
+     * it, and one run per account at a time keeps the network cost bounded.
+     */
+    fun importAccountPlaylists(accountId: String) {
+        val repository = youtubePlaylistsRepository ?: return
+        if (accountId.isBlank() || !accountImportsInFlight.add(accountId)) return
+        coroutineScope.launch {
+            try {
+                val remote = repository.loadForImport().getOrElse { return@launch }
+                if (remote.isEmpty()) return@launch
+                val existing = musicRepository.getAllPlaylists().associateBy { it.id }
+                val gate = Semaphore(4)
+                val fetched = coroutineScope {
+                    remote.map { playlist ->
+                        async { playlist to gate.withPermit { repository.loadSongs(playlist.id) } }
+                    }.awaitAll()
+                }
+                val songs = fetched.flatMap { (_, result) -> result.getOrDefault(emptyList()) }
+                val imported = fetched.mapNotNull { (playlist, result) ->
+                    val tracks = result.getOrNull() ?: return@mapNotNull null
+                    buildImportedPlaylist(
+                        accountId = accountId,
+                        remote = playlist,
+                        songs = tracks,
+                        existing = existing[accountPlaylistLocalId(playlist.id)]
+                    )
+                }
+                if (songs.isNotEmpty()) musicRepository.rememberCatalogueSongs(songs)
+                if (imported.isNotEmpty()) musicRepository.upsertPlaylists(imported)
+            } finally {
+                accountImportsInFlight.remove(accountId)
+            }
+        }
+    }
+
+    suspend fun resolvePlaylistSongs(ids: List<String>): List<Song> =
+        musicRepository.getSongsByIds(ids)
+
+    fun rememberCatalogueSongs(songs: List<Song>) {
+        if (songs.isEmpty()) return
+        coroutineScope.launch { musicRepository.rememberCatalogueSongs(songs) }
     }
 
     fun addSongToPlaylist(playlistId: String, songId: String) {

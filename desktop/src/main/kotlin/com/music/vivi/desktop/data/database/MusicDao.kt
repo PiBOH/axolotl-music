@@ -52,8 +52,38 @@ class MusicDao(
 
     suspend fun getSongsByIds(ids: List<String>): List<Song> = withContext(ioDispatcher) {
         if (ids.isEmpty()) return@withContext emptyList()
-        val byId = store.load().songs.associateBy { it.id }
+        val state = store.load()
+        val byId = HashMap<String, Song>(state.songs.size + state.catalogueSongs.size)
+        state.songs.forEach { byId[it.id] = it }
+        state.catalogueSongs.forEach { byId.putIfAbsent(it.id, it) }
         ids.distinct().mapNotNull { byId[it] }
+    }
+
+    suspend fun getCatalogueSongs(): List<Song> = withContext(ioDispatcher) {
+        store.load().catalogueSongs
+    }
+
+    /**
+     * Keeps the metadata of catalogue tracks a playlist points at. It is a
+     * bounded cache, not a second library: [LocalLibraryState.songs] stays the
+     * scanned files, so these rows never appear in Songs or Albums.
+     */
+    suspend fun upsertCatalogueSongs(songs: List<Song>) = withContext(ioDispatcher) {
+        if (songs.isEmpty()) return@withContext
+        store.update("catalogue_songs") { state ->
+            val byId = LinkedHashMap<String, Song>(state.catalogueSongs.size + songs.size)
+            state.catalogueSongs.forEach { byId[it.id] = it }
+            for (song in songs) {
+                if (song.id.isNotBlank()) byId[song.id] = song
+            }
+            val all = byId.values.toList()
+            val capped = if (all.size > LocalLibraryState.CATALOGUE_SONGS_LIMIT) {
+                all.takeLast(LocalLibraryState.CATALOGUE_SONGS_LIMIT)
+            } else {
+                all
+            }
+            if (capped == state.catalogueSongs) state else state.copy(catalogueSongs = capped)
+        }
     }
 
     suspend fun upsertSongs(songs: List<Song>) = withContext(ioDispatcher) {

@@ -28,6 +28,9 @@ interface MusicRepository {
     suspend fun hasSongs(): Boolean
     suspend fun getSongById(id: String): Song?
     suspend fun getSongsByIds(ids: List<String>): List<Song>
+    /** The metadata cache of catalogue tracks referenced by playlists. */
+    fun getCatalogueSongsFlow(): Flow<List<Song>>
+    suspend fun rememberCatalogueSongs(songs: List<Song>)
     suspend fun getSongByPath(path: String): Song?
     suspend fun deleteSong(song: Song)
     suspend fun deleteSongsInDirectory(directoryPath: String)
@@ -58,7 +61,9 @@ interface MusicRepository {
     suspend fun getSongsByGenre(genreName: String): List<Song>
 
     fun getAllPlaylistsFlow(sortOption: SortOption = SortOption.PlaylistNameAZ): Flow<List<Playlist>>
+    suspend fun getAllPlaylists(sortOption: SortOption = SortOption.PlaylistNameAZ): List<Playlist>
     suspend fun getPlaylistById(id: String): Playlist?
+    suspend fun upsertPlaylists(playlists: List<Playlist>)
     suspend fun createPlaylist(
         name: String,
         songIds: List<String> = emptyList(),

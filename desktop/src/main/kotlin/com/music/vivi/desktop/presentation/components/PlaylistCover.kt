@@ -45,7 +45,14 @@ fun PlaylistCover(
     modifier: Modifier = Modifier,
     size: Dp = 56.dp
 ) {
-    val shape: Shape = remember(playlist.coverShapeType, playlist.coverShapeDetail1, playlist.coverShapeDetail2, playlist.coverShapeDetail3, size) {
+    val shape: Shape = remember(
+        playlist.coverShapeType,
+        playlist.coverShapeDetail1,
+        playlist.coverShapeDetail2,
+        playlist.coverShapeDetail3,
+        playlist.coverShapeDetail4,
+        size
+    ) {
         when (playlist.coverShapeType) {
             PlaylistShapeType.Circle.name, "Circle" -> CircleShape
             PlaylistShapeType.SmoothRect.name, "SmoothRect" -> RoundedCornerShape(14.dp)

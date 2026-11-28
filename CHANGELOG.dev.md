@@ -1,5 +1,21 @@
 ## [Unreleased]
 
+## [6.0.8.11_DE-1.56.0-beta7] - 2026-11-28
+
+### ✨ Added
+
+- [DE] **The account's YouTube Music playlists enter the local library at login, once and without duplicates.** The first verified session starts a background mirror through `YouTubePlaylistsRepository.loadForImport()` and `loadSongs()`: every account playlist becomes a local row with a stable id `ytpl:<account>:<remoteId>`, its ordered tracks and its cover, while a custom cover, icon, colour or shape already on that row is kept. The mirror runs at most once per account and session, reads the rows four at a time, writes all the catalogue metadata and all the rows in one store write each, and never deletes a local playlist; a re-login or a restart updates the same rows instead of adding a second copy. **Measured on 28 Nov:** four `AccountPlaylistImportTest` cases prove the stable id across a rotated account id, the new row, the custom-cover preservation and the unchanged refresh; `:desktop:compileKotlin` passes, `:desktop:test` has 95 tests and `./gradlew test` is green across the repository (126 tests, 1 skipped because its live capture is absent).
+
+### 🔧 Changed
+
+- [DE] **The beta7 Windows package carries the fixes with its own runtime.** `:desktop:createDistributable` and `:desktop:windowsInstaller` are green: the app folder is 395 MB (`desktop/build/compose/binaries/main/app/AxolotlMusic`, launcher `AxolotlMusic.exe` 790,016 bytes) and the Inno Setup 7.1.0 installer is `build/installer/AxolotlMusic-6.0.8.11_DE-1.56.0-beta7-setup.exe`, 232,559,290 bytes, SHA-256 `e9968a4069035614b5ba5d4c2405123882135421e672c7231cc4076c493152c5`.
+
+### 🐛 Fixed
+
+- [DE] **A local playlist keeps its image, icon, colour and shape after a restart.** The cover shape is now saved whichever cover kind is selected, so a playlist with an image or the automatic collage no longer loses the shape when it is saved; a cover already inside `playlistCovers/` is reused instead of copied again, and `PlaylistCover` recomputes the star when its fourth shape detail changes. **Measured on 28 Nov:** `PlaylistPersistenceTest` writes and reopens a playlist with all eight cover fields and reads them back byte for byte; `:desktop:test` has 95 tests and `./gradlew test` passes.
+- [DE] **A playlist detail shows its tracks even when they are not in the filtered library.** The screen now resolves the playlist ids through the repository as well as through the filtered song list, and `LocalLibraryState.catalogueSongs` keeps the metadata of YouTube Music tracks added to a playlist, so an online track is still drawn after a restart and a song hidden by an excluded folder no longer disappears. The empty state only says "Playlist is empty" when the playlist really has no ids; while a lookup is running it shows the loading state, and an unresolvable list says so instead of claiming the playlist is empty. **Measured on 28 Nov:** `PlaylistPersistenceTest` proves a catalogue track is resolved after reopening the store and does not enter the scanned library; `:desktop:test` has 95 tests and `./gradlew test` passes.
+- [DE] **Clearing a cache or closing the player cannot crash on an uninitialized `FocusRequester`.** Every `requestFocus()` in the window is now `requestFocusSafely()`, which ignores the `IllegalStateException` of a target that left composition; the expanded player schedules its request only inside the composed `Surface` and only when a current song exists, and the search field and playlist dialog use the same guard. **Measured on 28 Nov:** `FocusRequesterSafeTest` calls the guard on a detached requester without throwing; `:desktop:test` has 95 tests and `./gradlew test` passes.
+
 ## [6.0.8.11_DE-1.56.0-beta6] - 2026-11-28
 
 ### ✨ Added

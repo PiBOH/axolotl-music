@@ -162,7 +162,7 @@ fun CreatePlaylistDialog(
     }
 
     LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+        focusRequester.requestFocusSafely()
     }
 
     LaunchedEffect(selectedImagePath) {
@@ -578,25 +578,34 @@ fun CreatePlaylistDialog(
                         onClick = {
                             if (playlistName.isNotBlank()) {
                                 scope.launch {
-                                    val finalCoverImageUri = if (selectedTab == 1 && !selectedImagePath.isNullOrBlank()) {
-                                        withContext(Dispatchers.IO) {
+                                    val chosenImage = selectedImagePath
+                                        ?.removePrefix("file://")
+                                        ?.substringBefore("?")
+                                    val finalCoverImageUri = if (selectedTab == 1 && !chosenImage.isNullOrBlank()) {
+                                        val source = File(chosenImage)
+                                        if (source.absolutePath.startsWith(DesktopPathProvider.playlistCoversDir.absolutePath)) {
+                                            // Already a saved cover: editing a shape or icon must not
+                                            // write another copy or orphan the current file.
+                                            chosenImage
+                                        } else withContext(Dispatchers.IO) {
                                             try {
-                                                val srcFile = File(selectedImagePath!!.removePrefix("file://").substringBefore("?"))
-                                                val image = ImageIO.read(srcFile)
+                                                val image = ImageIO.read(source)
                                                 if (image != null) {
                                                     val dest = File(DesktopPathProvider.playlistCoversDir, "playlist_cover_${UUID.randomUUID()}.jpg")
                                                     ImageIO.write(image, "jpg", dest)
                                                     dest.absolutePath
-                                                } else selectedImagePath
+                                                } else chosenImage
                                             } catch (_: Exception) {
-                                                selectedImagePath
+                                                chosenImage
                                             }
                                         }
                                     } else null
 
                                     val finalColor = if (selectedTab == 2) selectedColor else null
                                     val finalIcon = if (selectedTab == 2) selectedIconName else null
-                                    val finalShape = if (selectedTab == 2) selectedShapeType.name else null
+                                    // The shape is independent of the cover kind: an image or
+                                    // the automatic collage keeps the shape the user chose.
+                                    val finalShape = selectedShapeType.name
 
                                     onConfirm(
                                         playlistName.trim(),

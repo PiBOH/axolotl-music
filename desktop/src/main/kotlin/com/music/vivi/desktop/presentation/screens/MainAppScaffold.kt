@@ -71,6 +71,7 @@ import com.music.vivi.desktop.presentation.screens.library.PlaylistsTab
 import com.music.vivi.desktop.presentation.screens.library.SongsTab
 import com.music.vivi.desktop.presentation.screens.settings.SettingsSection
 import com.music.vivi.desktop.presentation.viewmodel.PlayerViewModel
+import com.music.vivi.desktop.presentation.viewmodel.YouTubeSessionStatus
 import com.music.vivi.desktop.presentation.screens.settings.DeviceSyncRuntime
 import com.music.vivi.desktop.ui.theme.PixelPlayerTheme
 import com.music.vivi.desktop.ui.theme.dynamic.DynamicColorProcessor
@@ -207,6 +208,16 @@ fun MainAppScaffold(
     LaunchedEffect(youtubeAccountState.sessionRevision) {
         if (youtubeAccountState.sessionRevision > 0 && searchQuery.isNotBlank()) {
             viewModel.youtubeMusicStateHolder.submit()
+        }
+    }
+
+    // A verified session is the moment the account's playlists enter the local
+    // library. The import is idempotent, so a restart or a re-login updates the
+    // same rows instead of adding copies.
+    LaunchedEffect(youtubeAccountState.activeAccountId, youtubeAccountState.status) {
+        val accountId = youtubeAccountState.activeAccountId
+        if (accountId != null && youtubeAccountState.status == YouTubeSessionStatus.ACTIVE) {
+            viewModel.importAccountPlaylists(accountId)
         }
     }
 
@@ -865,9 +876,11 @@ fun MainAppScaffold(
                 playlists = playlists,
                 onDismiss = { songToAddToPlaylist = null },
                 onPlaylistSelected = { playlist ->
+                    viewModel.rememberCatalogueSongs(listOf(songToAddToPlaylist!!))
                     viewModel.addSongToPlaylist(playlist.id, songToAddToPlaylist!!.id)
                 },
                 onCreatePlaylist = { name ->
+                    viewModel.rememberCatalogueSongs(listOf(songToAddToPlaylist!!))
                     viewModel.createPlaylist(name, listOf(songToAddToPlaylist!!.id))
                 }
             )
@@ -879,9 +892,11 @@ fun MainAppScaffold(
                 playlists = playlists,
                 onDismiss = { songsToAddToPlaylist = null },
                 onPlaylistSelected = { playlist ->
+                    viewModel.rememberCatalogueSongs(songsToAddToPlaylist!!)
                     viewModel.addSongsToPlaylist(playlist.id, songsToAddToPlaylist!!.map { it.id })
                 },
                 onCreatePlaylist = { name ->
+                    viewModel.rememberCatalogueSongs(songsToAddToPlaylist!!)
                     viewModel.createPlaylist(name, songsToAddToPlaylist!!.map { it.id })
                 }
             )

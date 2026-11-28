@@ -93,6 +93,7 @@ import com.music.vivi.desktop.presentation.components.QueueToggleButton
 import com.music.vivi.desktop.presentation.components.SaveLyricsDialog
 import com.music.vivi.desktop.presentation.components.SleepTimerDialog
 import com.music.vivi.desktop.presentation.components.TrackDialogInput
+import com.music.vivi.desktop.presentation.components.requestFocusSafely
 import com.music.vivi.desktop.presentation.components.subcomps.AppTooltip
 import com.music.vivi.desktop.presentation.components.subcomps.LyricsOptionsMenu
 import com.music.vivi.desktop.presentation.components.subcomps.LyricsSyncControls
@@ -203,10 +204,6 @@ fun ExpandedPlayerScreen(
 
     val focusRequester = remember { FocusRequester() }
 
-    LaunchedEffect(currentSong?.id, queue.size) {
-        focusRequester.requestFocus()
-    }
-
     if (currentSong == null) {
         LaunchedEffect(Unit) { onClose() }
         return
@@ -232,6 +229,13 @@ fun ExpandedPlayerScreen(
             }
         }
 
+        // The effect lives inside the composed Surface: only here is the
+        // FocusRequester attached to a node, and it is not scheduled at all when
+        // the player returns early with no current song.
+        LaunchedEffect(currentSong?.id, queue.size) {
+            focusRequester.requestFocusSafely()
+        }
+
         Surface(
             modifier = modifier
                 .fillMaxSize()
@@ -240,7 +244,7 @@ fun ExpandedPlayerScreen(
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null
-                ) { focusRequester.requestFocus() },
+                ) { focusRequester.requestFocusSafely() },
             color = colors.surface
         ) {
             Column(

@@ -1,5 +1,21 @@
 ## [Unreleased]
 
+## [6.0.8.11_DE-1.56.0-beta7] - 2026-11-28
+
+### ✨ Added
+
+- [DE] **The account's YouTube Music playlists enter the local library at login, once and without duplicates.**
+
+### 🔧 Changed
+
+- [DE] **The beta7 Windows package carries the fixes with its own runtime.**
+
+### 🐛 Fixed
+
+- [DE] **A local playlist keeps its image, icon, colour and shape after a restart.**
+- [DE] **A playlist detail shows its tracks even when they are not in the filtered library.**
+- [DE] **Clearing a cache or closing the player cannot crash on an uninitialized `FocusRequester`.**
+
 ## [6.0.8.11_DE-1.56.0-beta6] - 2026-11-28
 
 ### ✨ Added

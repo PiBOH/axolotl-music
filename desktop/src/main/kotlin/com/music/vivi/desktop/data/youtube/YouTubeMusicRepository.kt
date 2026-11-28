@@ -9,6 +9,31 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/** One catalogue row as the app's own model; shared with playlist import. */
+internal fun SongItem.toDesktopSong(): Song {
+    val artists = artists.map { artist ->
+        ArtistRef(
+            id = generateArtistId(artist.name),
+            name = artist.name,
+            isPrimary = artist === this.artists.first()
+        )
+    }
+    return Song(
+        id = "yt:$id",
+        title = title,
+        artist = artists.joinToString(", ") { it.name },
+        artistId = artists.firstOrNull()?.id ?: 0L,
+        artists = artists,
+        album = album?.name.orEmpty(),
+        albumId = album?.id?.hashCode()?.toLong() ?: 0L,
+        path = "${YouTubeMusicRepository.VIDEO_SCHEME}$id",
+        contentUriString = "${YouTubeMusicRepository.VIDEO_SCHEME}$id",
+        albumArtUriString = thumbnail,
+        duration = (duration ?: 0).toLong() * 1000L,
+        dateAdded = System.currentTimeMillis()
+    )
+}
+
 /**
  * The YouTube Music catalogue, as the app's own [Song] model.
  *
@@ -31,7 +56,7 @@ class YouTubeMusicRepository(
             .map { page ->
                 page.items
                     .filterIsInstance<SongItem>()
-                    .map(::toSong)
+                    .map { it.toDesktopSong() }
                     .distinctBy { it.id }
             }
             .onFailure { YtLog.log("search", "\"$trimmed\" failed: ${it.message}") }
@@ -59,30 +84,6 @@ class YouTubeMusicRepository(
 
     fun videoIdOf(song: Song): String? =
         song.path.removePrefix(VIDEO_SCHEME).takeIf { song.path.startsWith(VIDEO_SCHEME) && it.isNotBlank() }
-
-    private fun toSong(item: SongItem): Song {
-        val artists = item.artists.map { artist ->
-            ArtistRef(
-                id = generateArtistId(artist.name),
-                name = artist.name,
-                isPrimary = artist === item.artists.first()
-            )
-        }
-        return Song(
-            id = "yt:${item.id}",
-            title = item.title,
-            artist = item.artists.joinToString(", ") { it.name },
-            artistId = artists.firstOrNull()?.id ?: 0L,
-            artists = artists,
-            album = item.album?.name.orEmpty(),
-            albumId = item.album?.id?.hashCode()?.toLong() ?: 0L,
-            path = "$VIDEO_SCHEME${item.id}",
-            contentUriString = "$VIDEO_SCHEME${item.id}",
-            albumArtUriString = item.thumbnail,
-            duration = (item.duration ?: 0).toLong() * 1000L,
-            dateAdded = System.currentTimeMillis()
-        )
-    }
 
     companion object {
         const val VIDEO_SCHEME = "ytmusic://"

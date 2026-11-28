@@ -223,7 +223,8 @@ val stateModule: Module = module {
             lyricsRepository = get(),
             scanner = get(),
             coroutineScope = get(),
-            watcherService = get()
+            watcherService = get(),
+            youtubePlaylistsRepository = get()
         )
     }
     single {

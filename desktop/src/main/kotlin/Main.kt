@@ -56,6 +56,7 @@ import com.music.vivi.desktop.BuildConfig
 import com.music.vivi.desktop.generated.resources.Res
 import com.music.vivi.desktop.generated.resources.ic_tray
 import com.music.vivi.desktop.presentation.components.InputFocusTracker
+import com.music.vivi.desktop.presentation.components.requestFocusSafely
 import com.music.vivi.desktop.presentation.components.IntroSplash
 import com.music.vivi.desktop.presentation.components.LocalInputFocusTracker
 import com.music.vivi.desktop.presentation.components.LocalWindowMinimized
@@ -487,7 +488,7 @@ fun main(args: Array<String> = emptyArray()) {
             if (keyEvent.type == KeyEventType.KeyDown) {
                 when {
                     isModifier && keyEvent.key == Key.K -> {
-                        searchFocusRequester.requestFocus()
+                        searchFocusRequester.requestFocusSafely()
                         true
                     }
                     isModifier && keyEvent.key == Key.DirectionRight -> {

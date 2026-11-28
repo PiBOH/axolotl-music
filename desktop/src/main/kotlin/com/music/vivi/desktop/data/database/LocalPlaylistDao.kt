@@ -42,6 +42,21 @@ class LocalPlaylistDao(
         }
     }
 
+    /** One store write for a whole import, preserving each existing createdAt. */
+    suspend fun upsertPlaylists(playlists: List<Playlist>) = withContext(ioDispatcher) {
+        if (playlists.isEmpty()) return@withContext
+        store.update("playlists") { state ->
+            val existingById = state.playlists.associateBy { it.id }
+            val incoming = playlists.map { playlist ->
+                existingById[playlist.id]?.let { playlist.copy(createdAt = it.createdAt) } ?: playlist
+            }
+            val incomingIds = incoming.mapTo(HashSet(incoming.size)) { it.id }
+            state.copy(
+                playlists = state.playlists.filterNot { it.id in incomingIds } + incoming
+            )
+        }
+    }
+
     suspend fun deletePlaylist(id: String) = withContext(ioDispatcher) {
         store.update("playlists") { state ->
             state.copy(playlists = state.playlists.filterNot { it.id == id })

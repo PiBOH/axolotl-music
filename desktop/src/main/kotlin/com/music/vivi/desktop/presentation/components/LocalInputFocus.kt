@@ -5,6 +5,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 
 class InputFocusTracker(private val onActiveChange: (Boolean) -> Unit) {
@@ -36,6 +37,19 @@ class InputFocusTracker(private val onActiveChange: (Boolean) -> Unit) {
 }
 
 val LocalInputFocusTracker = compositionLocalOf { InputFocusTracker {} }
+
+/**
+ * A focus request that is safe when the target left composition between the
+ * click/effect and the request. A detached [FocusRequester] throws
+ * `IllegalStateException`; losing focus is never a reason to crash the window.
+ */
+fun FocusRequester.requestFocusSafely() {
+    try {
+        requestFocus()
+    } catch (_: IllegalStateException) {
+        // The field is not mounted (dialog closed, screen replaced, startup).
+    }
+}
 
 @Composable
 fun Modifier.trackInputFocus(): Modifier {

@@ -2,6 +2,7 @@ package com.music.vivi.desktop.data.youtube
 
 import com.music.innertube.YouTube
 import com.music.innertube.models.PlaylistItem
+import com.music.vivi.desktop.data.model.Song
 import com.music.vivi.desktop.data.store.LocalLibraryState
 import com.music.vivi.desktop.data.store.LocalLibraryStore
 import com.music.vivi.desktop.data.store.StoredPlaylistSnapshot
@@ -301,6 +302,35 @@ class YouTubePlaylistsRepository(
                 resolved,
                 store?.let { storedPlaylistOrder(it.load(), accountId()) }.orEmpty()
             )
+        }
+    }
+
+    /**
+     * The library list without the per-playlist editability pages. The account
+     * import only needs names and covers, so it does not pay one request per
+     * row just to learn whether the row can be renamed.
+     */
+    suspend fun loadForImport(): Result<List<RemotePlaylist>> = withContext(ioDispatcher) {
+        runCatching {
+            applyStoredPlaylistOrder(
+                readLibraryItems(),
+                store?.let { storedPlaylistOrder(it.load(), accountId()) }.orEmpty()
+            )
+        }
+    }
+
+    /** Every track of one playlist, with the metadata the local rows draw. */
+    suspend fun loadSongs(playlistId: String): Result<List<Song>> = withContext(ioDispatcher) {
+        runCatching {
+            val first = YouTube.playlist(playlistId).getOrThrow()
+            val songs = first.songs.toMutableList()
+            var continuation = first.songsContinuation
+            while (continuation != null) {
+                val next = YouTube.playlistContinuation(continuation).getOrThrow()
+                songs += next.songs
+                continuation = next.continuation
+            }
+            songs.distinctBy { it.id }.map { it.toDesktopSong() }
         }
     }
 

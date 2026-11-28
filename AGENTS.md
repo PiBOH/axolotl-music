@@ -2014,3 +2014,70 @@ used" (some candidate 2xx). It also signs one track with `WEB_CREATOR` as a
 control, and that control is how the rule above was established instead of
 assumed. A `206` is a success: the probe fetches a range, not the whole file.
 **Watch:** every track the probe resolves must show at least one 2xx candidate.
+
+## 17. Permanent delivery rules: optimization, stability and protected areas — MANDATORY
+
+These rules apply to every task in this repository, not only to the change that
+introduced them. A feature that works but crashes, leaks memory, recomposes per
+frame or re-downloads the same data is not finished.
+
+### Continuous optimization (performance and network)
+
+- **Compose/UI:** keep models `@Immutable`/`@Stable`; give every `LazyColumn`
+  and `LazyRow` a stable `key` and a `contentType`; read the playhead, seek bar
+  and synced lyrics inside the leaf that draws them (`graphicsLayer`, `Canvas`,
+  `derivedStateOf`); do not create collections, maps or parses in composition
+  when a `remember` keyed on the real inputs holds them; do not animate
+  something that redraws with the playhead.
+- **Memory:** release big bitmaps and decoded buffers when the screen leaves
+  composition; bound every persistent cache (the catalogue metadata cache is
+  `LocalLibraryState.CATALOGUE_SONGS_LIMIT`); do not keep a second full copy of
+  the library in a screen or a state holder.
+- **Network:** debounce queries; reuse a cached response or metadata when the
+  screen only needs it again; parallelise independent requests with a small
+  bound (four for account playlist import); never fetch once per recomposition
+  or once per row when one request answers the page; a failed request is
+  reported, not retried in a loop.
+- **Storage:** one logical change is one `LocalLibraryStore.update` write, and
+  every store flow is invalidated by the table name it actually reads. Do not
+  add a database engine, driver or ORM to the desktop.
+- **Measure before claiming:** a performance claim needs a real figure (the
+  `--fps-log` frame log, a timed check, a measured memory/network cost), never a
+  guess.
+
+### Crash-free and bug-free by construction
+
+- **No crash may reach the window.** Treat a possible `IllegalStateException`,
+  a detached `FocusRequester`, a missing file, a failed parse, a cancelled
+  coroutine or a nullable platform callback as a state to handle, not as a
+  reason to terminate. Guard a focus request with
+  `requestFocusSafely()` and schedule it from `LaunchedEffect` or a callback,
+  only while the target is composed.
+- **No unobserved failure:** every `Result`, `runCatching` and callback on a
+  user path must either recover, show a message or be deliberately counted;
+  swallowing an error is only acceptable when the UI already has a truthful
+  fallback.
+- **No stale or invented state:** an empty state must reflect the data (an
+  empty playlist is not a failed lookup); a persisted value must be read back
+  by the query that owns it; a test or check is run after the change that
+  motivated it, and its real exit status is reported.
+
+### Protected areas — ABSOLUTE PROHIBITION
+
+**Never modify, refactor, rename, move, gate or "clean up" the following, not
+even as a side effect of another task:**
+
+- the **YouTube Music sign-in WebView/window** (`YouTubeWebLogin.kt`, the
+  JavaFX sign-in window, `WebViewSelfTest` and its page/engine setup);
+- the **login cookie capture and sealing** (`BrowserCookies.kt`,
+  `SessionVault.kt`, `yt-cookie.txt`, `yt-context.txt`, their OAuth/cookie
+  parsing and redaction);
+- **Device Sync** (`DeviceSyncRuntime.kt`, `DesktopSyncManager`,
+  `LanSyncRelay`, `SyncClient`, `SyncIdentityStore`, the `:sync` protocol, the
+  Device Sync screen and its 1.55 pairing backend).
+
+If a requested change cannot be made without touching one of these areas, stop
+and ask the owner instead of changing it. A fix belongs outside the protected
+area (for example, importing account playlists from `YouTubePlaylistsRepository`
+and `LibraryStateHolder` must not alter the login window, cookie capture or the
+sync protocol).

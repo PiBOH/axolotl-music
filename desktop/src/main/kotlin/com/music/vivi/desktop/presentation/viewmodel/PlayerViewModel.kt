@@ -267,6 +267,7 @@ class PlayerViewModel(
     val albums = libraryStateHolder.albums
     val artists = libraryStateHolder.artists
     val playlists = libraryStateHolder.playlists
+    val catalogueSongs = libraryStateHolder.catalogueSongs
     val favoriteSongs = libraryStateHolder.favoriteSongs
     val filteredSongs = libraryStateHolder.filteredSongs
     val filteredFavoriteSongs = libraryStateHolder.filteredFavoriteSongs
@@ -355,6 +356,9 @@ class PlayerViewModel(
     fun restoreIgnoredDuplicateGroups() = libraryStateHolder.restoreIgnoredDuplicateGroups()
     fun renamePlaylist(id: String, newName: String) = libraryStateHolder.renamePlaylist(id, newName)
     fun updatePlaylist(playlist: Playlist) = libraryStateHolder.updatePlaylist(playlist)
+    fun importAccountPlaylists(accountId: String) = libraryStateHolder.importAccountPlaylists(accountId)
+    suspend fun resolvePlaylistSongs(ids: List<String>): List<Song> = libraryStateHolder.resolvePlaylistSongs(ids)
+    fun rememberCatalogueSongs(songs: List<Song>) = libraryStateHolder.rememberCatalogueSongs(songs)
     fun addSongToPlaylist(playlistId: String, songId: String) = libraryStateHolder.addSongToPlaylist(playlistId, songId)
     fun addSongsToPlaylist(playlistId: String, songIds: List<String>) = libraryStateHolder.addSongsToPlaylist(playlistId, songIds)
     fun removeSongFromPlaylist(playlistId: String, songId: String) = libraryStateHolder.removeSongFromPlaylist(playlistId, songId)

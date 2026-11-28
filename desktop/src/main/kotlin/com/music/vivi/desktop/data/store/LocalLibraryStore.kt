@@ -134,6 +134,13 @@ data class LocalLibraryState(
      * most recent [PLAYED_SONGS_LIMIT] are kept.
      */
     val playedSongs: List<Song> = emptyList(),
+    /**
+     * Catalogue tracks referenced by playlists but not present in the local
+     * library. A YouTube Music song added to a playlist stays here with its
+     * title, artist, cover and duration, so the playlist detail can render it
+     * after a restart without asking the network again.
+     */
+    val catalogueSongs: List<Song> = emptyList(),
     /** The queue as it was when the app last closed, so a restart resumes it. */
     val playbackQueue: List<Song> = emptyList(),
     val playbackQueueIndex: Int = -1,
@@ -174,6 +181,7 @@ data class LocalLibraryState(
 
     companion object {
         const val PLAYED_SONGS_LIMIT = 500
+        const val CATALOGUE_SONGS_LIMIT = 4000
     }
 }
 
@@ -305,7 +313,10 @@ class LocalLibraryStore(
     }
 
     fun notifyAllTables() {
-        notify("songs", "favorites", "playlists", "lyrics", "playback_events", "artists", "listenbrainz_pending")
+        notify(
+            "songs", "favorites", "playlists", "lyrics", "playback_events", "artists",
+            "listenbrainz_pending", "catalogue_songs"
+        )
     }
 
     private fun recordFor(state: LocalLibraryState) = LibraryImportRecord(

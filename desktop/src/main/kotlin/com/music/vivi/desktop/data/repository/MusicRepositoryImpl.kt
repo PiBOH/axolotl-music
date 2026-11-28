@@ -92,6 +92,17 @@ class MusicRepositoryImpl(
         return musicDao.getSongsByIds(ids)
     }
 
+    override fun getCatalogueSongsFlow(): Flow<List<Song>> = flow {
+        emit(musicDao.getCatalogueSongs())
+        store.tableInvalidationFlow.collect { table ->
+            if (table == "catalogue_songs") emit(musicDao.getCatalogueSongs())
+        }
+    }.flowOn(ioDispatcher)
+
+    override suspend fun rememberCatalogueSongs(songs: List<Song>) {
+        musicDao.upsertCatalogueSongs(songs)
+    }
+
     override suspend fun getSongByPath(path: String): Song? {
         return musicDao.getSongByPath(path)
     }
@@ -238,8 +249,16 @@ class MusicRepositoryImpl(
         }
     }.flowOn(ioDispatcher)
 
+    override suspend fun getAllPlaylists(sortOption: SortOption): List<Playlist> {
+        return playlistDao.getAllPlaylists(sortOption)
+    }
+
     override suspend fun getPlaylistById(id: String): Playlist? {
         return playlistDao.getPlaylistById(id)
+    }
+
+    override suspend fun upsertPlaylists(playlists: List<Playlist>) {
+        playlistDao.upsertPlaylists(playlists)
     }
 
     override suspend fun createPlaylist(
