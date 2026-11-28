@@ -28,6 +28,8 @@ object SyncMessageTypes {
     const val SYNC = "sync"
     const val NO_SNAPSHOT = "no_snapshot"
     const val PONG = "pong"
+    /** The paired peer came online or went offline. */
+    const val PRESENCE = "presence"
 }
 
 @Serializable
@@ -46,6 +48,8 @@ data class SyncEnvelope(
     val timestampMs: Long? = null,
     /** Echo of the PING's [timestampMs] back to the client, so it can measure RTT. */
     val echoTimestampMs: Long? = null,
+    /** Present on `presence` and `pair_joined`: whether the peer socket is open. */
+    val online: Boolean? = null,
 )
 
 /**

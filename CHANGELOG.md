@@ -1,5 +1,25 @@
 ## [Unreleased]
 
+## [6.0.8.11_DE-1.56.0-beta8] - 2026-11-28
+
+### ✨ Added
+
+- [DE] **Device Sync shows whether the phone is online and can stop sharing without unpairing.**
+- [DE] **Playback, settings and the local library travel together again, as in 1.55.**
+- [APK] **The phone consumes the relay's presence event.**
+
+### 🔧 Changed
+
+- [DE] **`wss://vivimusic-device-sync.onrender.com` is the one relay, and it is treated as a sleeping service rather than a dead endpoint.**
+- [DE] **The beta8 Windows package carries the fixes with its own runtime.**
+
+### 🐛 Fixed
+
+- [DE] **Pairing no longer gives up during Render's cold start.**
+- [DE] **A freshly paired phone no longer shows the desktop as offline.**
+- [DE] **A remote playlist keeps its account identity and is not duplicated on the next sync.**
+- [APK] **The phone receives the new presence state without a second protocol version.**
+
 ## [6.0.8.11_DE-1.56.0-beta7] - 2026-11-28
 
 ### ✨ Added

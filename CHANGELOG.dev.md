@@ -1,5 +1,25 @@
 ## [Unreleased]
 
+## [6.0.8.11_DE-1.56.0-beta8] - 2026-11-28
+
+### ✨ Added
+
+- [DE] **Device Sync shows whether the phone is online and can stop sharing without unpairing.** The right card now carries the peer's online/offline line and a Stop sharing / Start sharing button; the switch is persisted as `syncSharingEnabled` in `device-sync.json`, gates every `sync_push` (playback, settings and library) while leaving reception and pairing active, and a resume sends the current state once. The relay sends a `presence` message to the peer when a device opens or closes its socket, and the desktop maps it to the same terminal and status card it already uses for `Connected`.
+- [DE] **Playback, settings and the local library travel together again, as in 1.55.** `DesktopSyncManager` now observes `settingsFlow`, liked songs and playlists; the snapshot carries dark mode, dynamic colour, Sync volume, crossfade on/duration and audio quality, plus ordered playlists (including YouTube Music account lists) and liked-song tombstones with their edit times. Incoming settings are applied through the real repository, incoming playlists and likes are merged last-write-wins, and the applied state is rebuilt before the next automatic push so a resync cannot echo the old local copy back over the phone's changes.
+- [APK] **The phone consumes the relay's presence event.** The Android `DeviceSyncManager` handles `SyncEvent.Presence` and updates the peer status and name, so a paired phone sees the desktop come online as well.
+
+### 🔧 Changed
+
+- [DE] **`wss://vivimusic-device-sync.onrender.com` is the one relay, and it is treated as a sleeping service rather than a dead endpoint.** The default URL and its `/health` endpoint are documented in `SyncServer`; the WebSocket client waits 75 s for the handshake, retries while the pairing screen is open, and reconnects a saved pair at startup instead of requiring a new QR code. **Measured on 28 Nov:** the live default relay answered a `ping` with `pong`; the local relay test paired two clients, reported both presences online, forwarded a playback snapshot and reported the phone offline on disconnect with `RESULT: PASS`.
+- [DE] **The beta8 Windows package carries the fixes with its own runtime.** `:desktop:createDistributable` and `:desktop:windowsInstaller` are green: the app folder is 395 MB (`desktop/build/compose/binaries/main/app/AxolotlMusic`, launcher `AxolotlMusic.exe` 790,016 bytes) and the Inno Setup 7.1.0 installer is `build/installer/AxolotlMusic-6.0.8.11_DE-1.56.0-beta8-setup.exe`, 232,610,604 bytes, SHA-256 `2fd4f7b6103535e1f91b223d310be3c7f1053878fa0c98b2b3e7d38eafa618f2`. **Measured on 28 Nov:** `./gradlew test` finished with BUILD SUCCESSFUL (131 tests, 1 skipped) and `:desktop:test` has 98 tests, 0 failures.
+
+### 🐛 Fixed
+
+- [DE] **Pairing no longer gives up during Render's cold start.** The old ten-second code window and 30 s connect timeout were shorter than the free instance's wake-up; the code is requested as soon as the socket opens and the retry lasts a minute, so the first pairing after a sleep can complete.
+- [DE] **A freshly paired phone no longer shows the desktop as offline.** The relay had both sockets before the pair existed, so neither received a presence message; it now sends the current online state to both sides immediately after `pair_joined`. **Measured on 28 Nov:** the local relay test asserted both `pair_joined.online` flags and both presence messages before the snapshot.
+- [DE] **A remote playlist keeps its account identity and is not duplicated on the next sync.** A playlist created from a phone snapshot now uses `ytpl:<remoteId>`, the same shape the 1.55 import uses, so the next push still carries `remoteId` and the phone updates the row instead of importing a second copy.
+- [APK] **The phone receives the new presence state without a second protocol version.** `SyncEnvelope` gained an optional `online` field and `SyncEvent.Presence`; existing messages keep their shape, so a desktop or phone that never sees a presence message still pairs and syncs as before.
+
 ## [6.0.8.11_DE-1.56.0-beta7] - 2026-11-28
 
 ### ✨ Added
