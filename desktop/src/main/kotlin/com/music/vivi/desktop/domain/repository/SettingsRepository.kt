@@ -53,6 +53,8 @@ interface SettingsRepository {
     suspend fun setShowIntroSplash(show: Boolean)
     suspend fun setIntroStyle(style: String)
     suspend fun setIntroBackground(background: String)
+    suspend fun setShowWrappedOnHome(show: Boolean)
+    suspend fun setDeveloperOptionsUnlocked(unlocked: Boolean)
     suspend fun setDefaultTab(tab: String)
     suspend fun setLyricsAlignment(alignment: String)
     suspend fun setLyricsTextSize(size: String)

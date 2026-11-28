@@ -171,46 +171,55 @@ fun DeviceSyncScreen(
                     )
                 }
             } else {
-                Column(
-                    modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()),
+                // One vertical list for the whole page. The identity card no
+                // longer scrolls on its own, and the pairing card gets a
+                // finite height so the log LazyColumn inside it has a real
+                // viewport instead of inheriting infinity from the page.
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(20.dp),
                 ) {
-                    IdentityCard(
-                        viewModel = viewModel,
-                        deviceId = manager.deviceId,
-                        deviceName = manager.deviceName,
-                        syncVolume = syncVolume,
-                        autoResync = autoResync,
-                        mode = mode,
-                        relayUrl = relayUrl,
-                        paired = paired,
-                        onDisconnect = { manager.disconnect() },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    PairingCard(
-                        paired = paired,
-                        pairCode = pairCode,
-                        qrContent = qrContent,
-                        pairingRequested = pairingRequested,
-                        connectionState = connectionState,
-                        peerDeviceName = peerDeviceName,
-                        peerDeviceId = peerDeviceId,
-                        peerOnline = peerOnline,
-                        sharingEnabled = sharingEnabled,
-                        desktopName = manager.deviceName,
-                        desktopId = manager.deviceId,
-                        logs = logs,
-                        onToggleSharing = { manager.setSharingEnabled(!sharingEnabled) },
-                        onGenerate = {
-                            pairingRequested = true
-                            manager.beginPairing(mode, relayUrl)
-                        },
-                        onReset = {
-                            pairingRequested = false
-                            manager.disconnect()
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                    item(key = "device-sync-identity") {
+                        IdentityCard(
+                            viewModel = viewModel,
+                            deviceId = manager.deviceId,
+                            deviceName = manager.deviceName,
+                            syncVolume = syncVolume,
+                            autoResync = autoResync,
+                            mode = mode,
+                            relayUrl = relayUrl,
+                            paired = paired,
+                            onDisconnect = { manager.disconnect() },
+                            scrollable = false,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    item(key = "device-sync-pairing") {
+                        PairingCard(
+                            paired = paired,
+                            pairCode = pairCode,
+                            qrContent = qrContent,
+                            pairingRequested = pairingRequested,
+                            connectionState = connectionState,
+                            peerDeviceName = peerDeviceName,
+                            peerDeviceId = peerDeviceId,
+                            peerOnline = peerOnline,
+                            sharingEnabled = sharingEnabled,
+                            desktopName = manager.deviceName,
+                            desktopId = manager.deviceId,
+                            logs = logs,
+                            onToggleSharing = { manager.setSharingEnabled(!sharingEnabled) },
+                            onGenerate = {
+                                pairingRequested = true
+                                manager.beginPairing(mode, relayUrl)
+                            },
+                            onReset = {
+                                pairingRequested = false
+                                manager.disconnect()
+                            },
+                            modifier = Modifier.fillMaxWidth().height(520.dp),
+                        )
+                    }
                 }
             }
         }
@@ -228,10 +237,16 @@ private fun IdentityCard(
     relayUrl: String,
     paired: Boolean,
     onDisconnect: () -> Unit,
+    scrollable: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
     var relayDraft by remember(relayUrl) { mutableStateOf(relayUrl) }
+    val contentModifier = if (scrollable) {
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState())
+    } else {
+        Modifier.fillMaxWidth()
+    }
 
     Surface(
         shape = RoundedCornerShape(28.dp),
@@ -239,7 +254,7 @@ private fun IdentityCard(
         modifier = modifier,
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
+            modifier = contentModifier.padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {

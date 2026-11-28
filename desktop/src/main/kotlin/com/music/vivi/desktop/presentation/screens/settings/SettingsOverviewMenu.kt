@@ -58,6 +58,7 @@ fun SettingsOverviewMenu(
         SettingsSection.ACCOUNTS,
         SettingsSection.SHORTCUTS,
         SettingsSection.BACKUP,
+        SettingsSection.SYSTEM,
         SettingsSection.ABOUT,
     )
     val totalItems = sections.size

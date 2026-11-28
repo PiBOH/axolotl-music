@@ -395,6 +395,8 @@ class PlayerViewModel(
     val showIntroSplash = themeStateHolder.showIntroSplash
     val introStyle = themeStateHolder.introStyle
     val introBackground = themeStateHolder.introBackground
+    val showWrappedOnHome = themeStateHolder.showWrappedOnHome
+    val developerOptionsUnlocked = themeStateHolder.developerOptionsUnlocked
     val defaultTab = themeStateHolder.defaultTab
     fun setLegacySetting(key: String, value: String) = themeStateHolder.setLegacySetting(key, value)
     fun setDarkMode(dark: Boolean) = themeStateHolder.setDarkMode(dark)
@@ -410,6 +412,8 @@ class PlayerViewModel(
     fun setShowIntroSplash(show: Boolean) = themeStateHolder.setShowIntroSplash(show)
     fun setIntroStyle(style: String) = themeStateHolder.setIntroStyle(style)
     fun setIntroBackground(background: String) = themeStateHolder.setIntroBackground(background)
+    fun setShowWrappedOnHome(show: Boolean) = themeStateHolder.setShowWrappedOnHome(show)
+    fun setDeveloperOptionsUnlocked(unlocked: Boolean) = themeStateHolder.setDeveloperOptionsUnlocked(unlocked)
     fun toggleShowPlayerFileInfo() = themeStateHolder.toggleShowPlayerFileInfo()
     fun setNavBarCompactMode(enabled: Boolean) = themeStateHolder.setNavBarCompactMode(enabled)
     fun toggleNavBarCompactMode() = themeStateHolder.toggleNavBarCompactMode()

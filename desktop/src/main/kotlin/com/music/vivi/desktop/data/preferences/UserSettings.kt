@@ -118,6 +118,10 @@ data class UserSettings(
     val showIntroSplash: Boolean = true,
     val introStyle: String = "logo_name",
     val introBackground: String = "gradient",
+    // The Wrapped card on Home is opt-in, like the 1.55 switch.
+    val showWrappedOnHome: Boolean = false,
+    // Developer options are hidden until the About logo is tapped seven times.
+    val developerOptionsUnlocked: Boolean = false,
     val quickAccessItems: List<QuickAccessItem> = QuickAccessItem.DEFAULT_ITEMS,
     // Device sync (the 1.55 pairing screen). The pairing identity itself stays in
     // device-sync.json; these are only the options the two cards expose.

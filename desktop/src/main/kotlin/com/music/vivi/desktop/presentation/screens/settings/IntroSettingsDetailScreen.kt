@@ -1,6 +1,7 @@
 package com.music.vivi.desktop.presentation.screens.settings
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
@@ -27,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -190,7 +193,9 @@ private fun IntroDropdownRow(
     var expanded by remember { mutableStateOf(false) }
     val label = options.firstOrNull { it.first == value }?.second ?: value
 
-    Box {
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val menuWidth = minOf(280.dp, maxWidth)
+        val menuOffset = (maxWidth - menuWidth).coerceAtLeast(0.dp)
         ExpressiveSettingsRow(
             title = title,
             subtitle = subtitle,
@@ -224,6 +229,8 @@ private fun IntroDropdownRow(
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
+            modifier = Modifier.width(menuWidth),
+            offset = DpOffset(menuOffset, 0.dp),
         ) {
             options.forEach { (key, optionLabel) ->
                 DropdownMenuItem(

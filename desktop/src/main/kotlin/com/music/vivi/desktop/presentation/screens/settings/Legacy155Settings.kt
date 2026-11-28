@@ -3,6 +3,7 @@ package com.music.vivi.desktop.presentation.screens.settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -40,6 +41,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.toggleableState
 import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.music.vivi.desktop.data.preferences.AlbumArtPaletteStyle
 import com.music.vivi.desktop.data.preferences.UserSettings
@@ -116,6 +118,7 @@ enum class LegacyCommon {
     EQUALIZER_ENABLED,
     ALBUM_ART_CACHE,
     PALETTE_STYLE,
+    SHOW_WRAPPED_ON_HOME,
 }
 
 data class LegacyOption(
@@ -798,7 +801,7 @@ fun legacyPageFor(section: SettingsSection): LegacyPageSpec = when (section) {
         "Wrapped", "Your listening year",
         group(
             "WRAPPED",
-            sw("showWrappedOnHome", "Show on Home", "Put the Wrapped card on the Home screen."),
+            sw("showWrappedOnHome", "Show on Home", "Put the Wrapped card on the Home screen.", common = LegacyCommon.SHOW_WRAPPED_ON_HOME),
             txt("wrappedTracks", "Tracks started", "0", "Read-only summary."),
             txt("wrappedMinutes", "Minutes listened", "0", "Read-only summary."),
             txt("wrappedTopArtist", "Top artist", "Not enough plays", "Read-only summary."),
@@ -1140,6 +1143,7 @@ fun Legacy155SettingsScreen(
                         SettingsSection.V155_ACCOUNT -> Legacy155AccountPage(viewModel, pageActions)
                         SettingsSection.V155_BACKUP -> Legacy155BackupPage(viewModel, pageActions)
                         SettingsSection.V155_STORAGE -> Legacy155StoragePage(viewModel, pageActions)
+                        SettingsSection.V155_UPDATES -> Legacy155UpdatesPage(viewModel)
                         SettingsSection.V155_WRAPPED -> Legacy155WrappedPage(viewModel)
                         SettingsSection.V155_SPOTIFY -> Legacy155SpotifyPage(pageActions)
                         else -> Unit
@@ -1225,7 +1229,9 @@ private fun Legacy155Row(
             var open by remember { mutableStateOf(false) }
             val label = option.choices.firstOrNull { it.first == raw }?.second ?: raw
             Surface(shape = shape, color = colors.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
-                Box {
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    val menuWidth = minOf(280.dp, maxWidth)
+                    val menuOffset = (maxWidth - menuWidth).coerceAtLeast(0.dp)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth().clickable { open = true }.padding(16.dp),
@@ -1245,7 +1251,12 @@ private fun Legacy155Row(
                             modifier = Modifier.size(20.dp),
                         )
                     }
-                    DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                    DropdownMenu(
+                        expanded = open,
+                        onDismissRequest = { open = false },
+                        modifier = Modifier.width(menuWidth),
+                        offset = DpOffset(menuOffset, 0.dp),
+                    ) {
                         option.choices.forEach { (value, text) ->
                             DropdownMenuItem(
                                 text = { Text(text) },
@@ -1362,6 +1373,7 @@ private fun commonValue(common: LegacyCommon, settings: UserSettings): String = 
     LegacyCommon.EQUALIZER_ENABLED -> settings.equalizerEnabled.toString()
     LegacyCommon.ALBUM_ART_CACHE -> settings.albumArtCacheLimitMb.toString()
     LegacyCommon.PALETTE_STYLE -> settings.albumArtPaletteStyle
+    LegacyCommon.SHOW_WRAPPED_ON_HOME -> settings.showWrappedOnHome.toString()
 }
 
 private fun writeCommon(viewModel: PlayerViewModel, common: LegacyCommon?, value: String) {
@@ -1384,6 +1396,7 @@ private fun writeCommon(viewModel: PlayerViewModel, common: LegacyCommon?, value
         LegacyCommon.EQUALIZER_ENABLED -> viewModel.setEqualizerEnabled(value.toBoolean())
         LegacyCommon.ALBUM_ART_CACHE -> viewModel.setAlbumArtCacheLimitMb(value.toInt())
         LegacyCommon.PALETTE_STYLE -> viewModel.setAlbumArtPaletteStyle(AlbumArtPaletteStyle.fromStorageKey(value))
+        LegacyCommon.SHOW_WRAPPED_ON_HOME -> viewModel.setShowWrappedOnHome(value.toBoolean())
         null -> Unit
     }
 }

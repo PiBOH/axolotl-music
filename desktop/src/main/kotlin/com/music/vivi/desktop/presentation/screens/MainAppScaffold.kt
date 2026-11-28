@@ -120,6 +120,7 @@ fun MainAppScaffold(
     val navBarCompactMode by viewModel.navBarCompactMode.collectAsState()
     val defaultTabKey by viewModel.defaultTab.collectAsState()
     val showQueueHistory by viewModel.showQueueHistory.collectAsState()
+    val showWrappedOnHome by viewModel.showWrappedOnHome.collectAsState()
     val storageFilter by viewModel.storageFilter.collectAsState()
     val showShortcutsDialog by viewModel.showShortcutsDialog.collectAsState()
     val quickAccessItems by viewModel.quickAccessItems.collectAsState()
@@ -460,6 +461,7 @@ fun MainAppScaffold(
                                                 favoriteSongs = favoriteSongs,
                                                 recentlyPlayedSongs = recentlyPlayedSongs,
                                                 homeStatsOverview = homeStatsOverview,
+                                                showWrappedOnHome = showWrappedOnHome,
                                                 currentSong = currentSong,
                                                 isPlaying = playerInfo.isPlaying,
                                                 onSongSelect = { song ->

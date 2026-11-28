@@ -1,5 +1,26 @@
 ## [Unreleased]
 
+## [6.0.8.11_DE-1.56.0-beta10] - 2026-11-28
+
+### ✨ Added
+
+- [DE] **Settings has a real System root.**
+- [DE] **Developer options are hidden until the About logo is tapped seven times.**
+- [DE] **Wrapped has a Home card controlled by `Show Wrapped on Home`.**
+- [DE] **`Settings > System > Updates` is the 1.55 update screen again.**
+
+### 🔧 Changed
+
+- [DE] **About no longer duplicates the update controls.**
+- [DE] **Every settings dropdown opens to the right, directly under its row.**
+- [DE] **The beta10 Windows package carries these changes with its own runtime.**
+
+### 🐛 Fixed
+
+- [DE] **Device Sync no longer crashes when the pair connects.**
+- [DE] **`Show Wrapped on Home` now actually changes Home.**
+- [DE] **The narrow Device Sync column proves the pairing card with a real height.**
+
 ## [6.0.8.11_DE-1.56.0-beta9] - 2026-11-28
 
 ### ✨ Added

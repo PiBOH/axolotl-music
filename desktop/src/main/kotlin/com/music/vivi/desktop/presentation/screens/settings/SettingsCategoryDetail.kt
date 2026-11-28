@@ -1597,11 +1597,7 @@ private fun legacyPagesFor(section: SettingsSection): List<SettingsSection> = wh
         SettingsSection.V155_SPOTIFY,
     )
     SettingsSection.SHORTCUTS -> listOf(SettingsSection.V155_DESKTOP)
-    SettingsSection.BACKUP -> listOf(SettingsSection.V155_UPDATES)
-    SettingsSection.ABOUT -> listOf(
-        SettingsSection.V155_WRAPPED,
-        SettingsSection.V155_SYSTEM,
-    )
+    SettingsSection.ABOUT -> listOf(SettingsSection.V155_WRAPPED)
     else -> emptyList()
 }
 

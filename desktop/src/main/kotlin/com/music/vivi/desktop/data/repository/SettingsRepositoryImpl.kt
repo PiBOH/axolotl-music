@@ -257,6 +257,14 @@ class SettingsRepositoryImpl(
         updateSettings { it.copy(introBackground = background) }
     }
 
+    override suspend fun setShowWrappedOnHome(show: Boolean) {
+        updateSettings { it.copy(showWrappedOnHome = show) }
+    }
+
+    override suspend fun setDeveloperOptionsUnlocked(unlocked: Boolean) {
+        updateSettings { it.copy(developerOptionsUnlocked = unlocked) }
+    }
+
     override suspend fun setDefaultTab(tab: String) {
         updateSettings { it.copy(defaultTab = tab) }
     }
@@ -554,7 +562,15 @@ class SettingsRepositoryImpl(
                 val content = settingsFile.readText(Charsets.UTF_8)
                 val loaded = json.decodeFromString(UserSettings.serializer(), content)
                 val migrated = migrateLyricsSources(loaded)
-                migrated.copy(uiScale = migrated.uiScale.coerceIn(0.70f, 2.00f))
+                val withWrapped = if (
+                    !migrated.showWrappedOnHome &&
+                    migrated.legacySettings["showWrappedOnHome"] == "true"
+                ) {
+                    migrated.copy(showWrappedOnHome = true)
+                } else {
+                    migrated
+                }
+                withWrapped.copy(uiScale = withWrapped.uiScale.coerceIn(0.70f, 2.00f))
             } else {
                 // A new profile starts with the online sources on; the marker says
                 // the migration already ran, so turning the switch off stays off.

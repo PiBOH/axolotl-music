@@ -3,6 +3,7 @@ package com.music.vivi.desktop.presentation.screens
 import com.music.vivi.desktop.BuildConfig
 import com.music.vivi.desktop.generated.resources.Res
 import com.music.vivi.desktop.generated.resources.ic_rounded_auto_awesome
+import com.music.vivi.desktop.generated.resources.ic_rounded_chevron_right
 import com.music.vivi.desktop.generated.resources.ic_rounded_folder
 import com.music.vivi.desktop.generated.resources.ic_rounded_folder_open
 import com.music.vivi.desktop.generated.resources.ic_rounded_palette
@@ -61,6 +62,7 @@ import com.music.vivi.desktop.presentation.components.DailyMixSection
 import com.music.vivi.desktop.presentation.components.RecentlyPlayedSection
 import com.music.vivi.desktop.presentation.components.StatsOverviewCard
 import com.music.vivi.desktop.presentation.components.ViviLogo
+import com.music.vivi.desktop.utils.formatListeningDurationLong
 import com.music.vivi.desktop.utils.shapes.RoundedStarShape
 
 @Composable
@@ -69,6 +71,7 @@ fun HomeScreen(
     favoriteSongs: List<Song>,
     recentlyPlayedSongs: List<Song> = emptyList(),
     homeStatsOverview: PlaybackStatsSummary? = null,
+    showWrappedOnHome: Boolean = false,
     currentSong: Song?,
     isPlaying: Boolean,
     onSongSelect: (Song) -> Unit,
@@ -299,6 +302,15 @@ fun HomeScreen(
             }
         }
 
+        if (showWrappedOnHome) {
+            item {
+                WrappedHomeCard(
+                    summary = homeStatsOverview,
+                    onClick = onNavigateToStats
+                )
+            }
+        }
+
         if (dailyMixSongs.isNotEmpty()) {
             item {
                 DailyMixSection(
@@ -366,6 +378,121 @@ private fun rememberYourMixTitleStyle(isCompact: Boolean = false): TextStyle {
             fontSize = fontSize,
             lineHeight = lineHeight
         )
+    }
+}
+
+@Composable
+private fun WrappedHomeCard(
+    summary: PlaybackStatsSummary?,
+    onClick: () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+    val activeSummary = summary?.takeIf { it.hasListeningActivity() }
+
+    Card(
+        onClick = onClick,
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerHigh),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(colors.tertiaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(Res.drawable.ic_rounded_auto_awesome),
+                        contentDescription = null,
+                        tint = colors.onTertiaryContainer,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "VIVI Wrapped",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.onSurface
+                    )
+                    Text(
+                        text = "Your listening year, at a glance",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.onSurfaceVariant
+                    )
+                }
+                Icon(
+                    painter = painterResource(Res.drawable.ic_rounded_chevron_right),
+                    contentDescription = "Open VIVI Wrapped",
+                    tint = colors.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            if (activeSummary != null) {
+                Text(
+                    text = formatListeningDurationLong(activeSummary.totalDurationMs),
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onSurface
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Tracks played",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = colors.onSurfaceVariant
+                        )
+                        Text(
+                            text = activeSummary.totalPlayCount.toString(),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.onSurface
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Top artist",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = colors.onSurfaceVariant
+                        )
+                        Text(
+                            text = activeSummary.topArtists.firstOrNull()?.artist ?: "Not enough plays yet",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.onSurface
+                        )
+                    }
+                }
+                activeSummary.topSongs.firstOrNull()?.let { song ->
+                    Text(
+                        text = "Top track  ${song.title} · ${song.artist}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = colors.onSurfaceVariant
+                    )
+                }
+            } else {
+                Text(
+                    text = "Play a few tracks and your Wrapped card fills with this week's numbers.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = colors.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 

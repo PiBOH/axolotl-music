@@ -1,5 +1,26 @@
 ## [Unreleased]
 
+## [6.0.8.11_DE-1.56.0-beta10] - 2026-11-28
+
+### ✨ Added
+
+- [DE] **Settings has a real System root.** `Settings > System` is a top-level category with its own hub; `Updates` and, once unlocked, `Developer options` live inside it. The search catalogue also finds `System` and `Updates & Changelog` directly.
+- [DE] **Developer options are hidden until the About logo is tapped seven times.** Seven consecutive clicks on the app logo in `About` persist `developerOptionsUnlocked` in `settings.json` and show a small confirmation line; before that the System hub has no Developer row, and after it `Settings > System > Developer options` exposes the full 1.55 developer page.
+- [DE] **Wrapped has a Home card controlled by `Show Wrapped on Home`.** The typed `showWrappedOnHome` preference is persisted, observed by `PlayerViewModel`, passed through `MainAppScaffold` and rendered as a `WrappedHomeCard` at the top of Home's content when enabled. The old `legacySettings.showWrappedOnHome` value is migrated once.
+- [DE] **`Settings > System > Updates` is the 1.55 update screen again.** It shows the installed version, the latest version, the last check time, release notes, download progress with SHA/state, the install action and the startup-check switch, all backed by the existing `UpdateStateHolder`.
+
+### 🔧 Changed
+
+- [DE] **About no longer duplicates the update controls.** The update check, the startup switch and the release dialog were removed from About; the single path is `Settings > System > Updates`.
+- [DE] **Every settings dropdown opens to the right, directly under its row.** `Legacy155Settings` and `IntroSettingsDetailScreen` now measure their row with `BoxWithConstraints`, clamp the menu to the available width (`minOf(280.dp, maxWidth)`) and offset it by `maxWidth - menuWidth`, so the menu's right edge lines up with the row instead of drifting to the screen edge.
+- [DE] **The beta10 Windows package carries these changes with its own runtime.** `:desktop:createDistributable` and `:desktop:windowsInstaller` are green: the app image is 395 MB at `desktop/build/compose/binaries/main/app/AxolotlMusic`, the Inno Setup 7.1.0 installer is `build/installer/AxolotlMusic-6.0.8.11_DE-1.56.0-beta10-setup.exe` (232,686,098 bytes, SHA-256 `057b3e24cab59cca706db5a397e38d125ab4e0aef71c7664c781098dfdeef090`) and the runtime archive is `build/installer/AxolotlMusic-6.0.8.11_DE-1.56.0-beta10-runtime.zip` (263,702,353 bytes, SHA-256 `876f21c1413324ce8be2c5a8df9561760cbe69f47118dfd51f76ef40742b86d7`). **Measured on 28 Nov:** `./gradlew test` finished with BUILD SUCCESSFUL and the desktop suite ran 103 tests with 0 failures.
+
+### 🐛 Fixed
+
+- [DE] **Device Sync no longer crashes when the pair connects.** The narrow layout was a `Column(verticalScroll)` containing a `LazyColumn` with `weight(1f)`, which measured the list with infinite maximum height. It is now one `LazyColumn`: the identity block is a non-scrollable `item()` and the pairing block has a finite `520.dp` height, so the log list keeps its own bounded scroll.
+- [DE] **`Show Wrapped on Home` now actually changes Home.** The setting was written only to the legacy map and no Home surface observed it; it now has a typed field, a migration, a ViewModel flow and a real card.
+- [DE] **The narrow Device Sync column proves the pairing card with a real height.** `IdentityCard` accepts `scrollable = false` and the pairing card no longer receives an unbounded constraint from the outer scroll container.
+
 ## [6.0.8.11_DE-1.56.0-beta9] - 2026-11-28
 
 ### ✨ Added

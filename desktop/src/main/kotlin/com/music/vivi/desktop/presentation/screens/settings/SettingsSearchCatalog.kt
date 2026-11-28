@@ -22,6 +22,7 @@ import com.music.vivi.desktop.generated.resources.ic_rounded_info
 import com.music.vivi.desktop.generated.resources.ic_rounded_layers
 import com.music.vivi.desktop.generated.resources.ic_rounded_music_note
 import com.music.vivi.desktop.generated.resources.ic_rounded_palette
+import com.music.vivi.desktop.generated.resources.ic_rounded_refresh
 import com.music.vivi.desktop.generated.resources.ic_rounded_settings
 import com.music.vivi.desktop.generated.resources.ic_rounded_settings_backup_restore
 import com.music.vivi.desktop.generated.resources.ic_rounded_speed
@@ -321,6 +322,22 @@ object SettingsSearchCatalog {
             section = SettingsSection.ACCOUNTS,
             keywords = listOf("jellyfin", "emby", "stream", "server", "remote", "cloud"),
             icon = Res.drawable.ic_rounded_account_circle
+        ),
+
+        // --- SYSTEM ---
+        SettingSearchItem(
+            title = "System",
+            description = "Updates, developer options and system diagnostics",
+            section = SettingsSection.SYSTEM,
+            keywords = listOf("system", "updates", "developer", "diagnostics", "advanced"),
+            icon = Res.drawable.ic_rounded_settings
+        ),
+        SettingSearchItem(
+            title = "Updates & Changelog",
+            description = "Check the installed version, read release notes and download the verified installer",
+            section = SettingsSection.V155_UPDATES,
+            keywords = listOf("update", "updates", "changelog", "release", "installer", "download", "version"),
+            icon = Res.drawable.ic_rounded_refresh
         ),
 
         // --- ABOUT ---

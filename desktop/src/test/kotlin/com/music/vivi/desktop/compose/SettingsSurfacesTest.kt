@@ -6,6 +6,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -207,6 +208,59 @@ class SettingsSurfacesTest {
         assertEquals(78, choices(SettingsSection.V155_CONTENT, "contentLanguage").size, "77 languages plus system default")
         assertEquals(110, choices(SettingsSection.V155_CONTENT, "contentCountry").size, "109 countries plus system default")
         assertEquals(77, choices(SettingsSection.V155_AI, "translateLanguage").size, "the AI target language uses the full 1.55 language list")
+    }
+
+    @Test
+    fun systemRootHidesDeveloperUntilSevenLogoTapsUnlockIt() {
+        val harness = DesktopUiHarness()
+        try {
+            runComposeUiTest {
+                val sectionState = mutableStateOf<SettingsSection?>(null)
+                openSettings(harness, sectionState)
+
+                onNodeWithText("System").performScrollTo().performClick()
+                waitForText("Updates")
+                onNodeWithText("Developer options").assertDoesNotExist()
+
+                sectionState.value = null
+                waitForText("About")
+                onNodeWithText("About").performScrollTo().performClick()
+                waitUntil(timeoutMillis = 5_000) {
+                    onAllNodes(hasTestTag("about-logo")).fetchSemanticsNodes().isNotEmpty()
+                }
+                onNodeWithTag("about-logo").assertExists()
+                repeat(7) { onNodeWithTag("about-logo").performClick() }
+                waitUntil(timeoutMillis = 5_000) {
+                    harness.viewModel.developerOptionsUnlocked.value
+                }
+
+                sectionState.value = SettingsSection.SYSTEM
+                waitForText("Developer options")
+                onNodeWithText("Developer options").performScrollTo().performClick()
+                waitForText("Enable developer options")
+                println("[UI] Settings surfaces: System hub, Developer Options locked then unlocked by 7 logo taps")
+            }
+        } finally {
+            harness.close()
+        }
+    }
+
+    @Test
+    fun wrappedOnHomeIsPersistedAndObservedByTheSettingFlow() {
+        val harness = DesktopUiHarness()
+        try {
+            runBlocking {
+                assertTrue(!harness.viewModel.showWrappedOnHome.value)
+                harness.viewModel.setShowWrappedOnHome(true)
+                withTimeout(5_000) {
+                    harness.viewModel.showWrappedOnHome.first { it }
+                }
+                assertTrue(harness.viewModel.showWrappedOnHome.value)
+                assertTrue(harness.settingsRepository.getSettings().showWrappedOnHome)
+            }
+        } finally {
+            harness.close()
+        }
     }
 
     private class RecordingActions : Legacy155Actions {

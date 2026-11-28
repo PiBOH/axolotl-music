@@ -91,6 +91,12 @@ enum class SettingsSection(
         subtitle = "Export and recover your personal data",
         icon = Res.drawable.ic_rounded_settings_backup_restore
     ),
+    SYSTEM(
+        id = "system",
+        title = "System",
+        subtitle = "Updates, developer options and diagnostics",
+        icon = Res.drawable.ic_rounded_settings
+    ),
     ABOUT(
         id = "about",
         title = "About",
@@ -301,6 +307,7 @@ fun getCategoryColors(category: SettingsSection, isDark: Boolean): Pair<Color, C
             SettingsSection.ACCOUNTS -> Color(0xFF37474F) to Color(0xFFBBD9E8)
             SettingsSection.SHORTCUTS -> Color(0xFF2E4369) to Color(0xFFBFD2F8)
             SettingsSection.BACKUP -> Color(0xFF3B4869) to Color(0xFFD9E2FF)
+            SettingsSection.SYSTEM -> Color(0xFF3D4A43) to Color(0xFFD6E8DB)
             SettingsSection.ABOUT -> Color(0xFF3F474D) to Color(0xFFDEE3EB)
             SettingsSection.INTRO -> Color(0xFF4A3B63) to Color(0xFFE7D8FF)
             SettingsSection.PIXELPLAYER -> Color(0xFF243B53) to Color(0xFFD4E4F7)
@@ -316,6 +323,7 @@ fun getCategoryColors(category: SettingsSection, isDark: Boolean): Pair<Color, C
             SettingsSection.ACCOUNTS -> Color(0xFFD6EAF5) to Color(0xFF103548)
             SettingsSection.SHORTCUTS -> Color(0xFFD6E3FF) to Color(0xFF285EA7)
             SettingsSection.BACKUP -> Color(0xFFD9E2FF) to Color(0xFF27304E)
+            SettingsSection.SYSTEM -> Color(0xFFD9EADB) to Color(0xFF2E4635)
             SettingsSection.ABOUT -> Color(0xFFEFF1F7) to Color(0xFF44474F)
             SettingsSection.INTRO -> Color(0xFFE9DDFF) to Color(0xFF4B2D7A)
             SettingsSection.PIXELPLAYER -> Color(0xFFDCE8F5) to Color(0xFF26476B)

@@ -116,6 +116,14 @@ class ThemeStateHolder(
         .map { it.introBackground }
         .stateIn(coroutineScope, SharingStarted.Eagerly, "gradient")
 
+    val showWrappedOnHome: StateFlow<Boolean> = settingsRepository.settingsFlow
+        .map { it.showWrappedOnHome }
+        .stateIn(coroutineScope, SharingStarted.Eagerly, false)
+
+    val developerOptionsUnlocked: StateFlow<Boolean> = settingsRepository.settingsFlow
+        .map { it.developerOptionsUnlocked }
+        .stateIn(coroutineScope, SharingStarted.Eagerly, false)
+
     val defaultTab: StateFlow<String> = settingsRepository.settingsFlow
         .map { it.defaultTab }
         .stateIn(coroutineScope, SharingStarted.Eagerly, "HOME")
@@ -205,6 +213,18 @@ class ThemeStateHolder(
     fun setIntroBackground(background: String) {
         coroutineScope.launch {
             settingsRepository.setIntroBackground(background)
+        }
+    }
+
+    fun setShowWrappedOnHome(show: Boolean) {
+        coroutineScope.launch {
+            settingsRepository.setShowWrappedOnHome(show)
+        }
+    }
+
+    fun setDeveloperOptionsUnlocked(unlocked: Boolean) {
+        coroutineScope.launch {
+            settingsRepository.setDeveloperOptionsUnlocked(unlocked)
         }
     }
 

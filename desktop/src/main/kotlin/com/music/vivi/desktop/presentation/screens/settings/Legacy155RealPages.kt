@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -30,8 +31,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.music.vivi.desktop.BuildConfig
 import com.music.vivi.desktop.data.model.StatsTimeRange
 import com.music.vivi.desktop.data.store.LocalLibraryStore
+import com.music.vivi.desktop.domain.model.UpdateCheckResult
+import com.music.vivi.desktop.domain.model.UpdateDownloadState
 import com.music.vivi.desktop.data.youtube.BrowserCookies
 import com.music.vivi.desktop.presentation.components.StatsOverviewCard
 import com.music.vivi.desktop.presentation.viewmodel.PlayerViewModel
@@ -39,8 +43,13 @@ import com.music.vivi.desktop.utils.DesktopPathProvider
 import com.music.vivi.desktop.utils.DirectoryPicker
 import com.music.vivi.desktop.data.backup.FullBackup
 import com.music.vivi.desktop.generated.resources.Res
+import com.music.vivi.desktop.generated.resources.ic_automirrored_rounded_open_in_new
 import com.music.vivi.desktop.generated.resources.ic_outlined_file_download
 import com.music.vivi.desktop.generated.resources.ic_outlined_file_upload
+import com.music.vivi.desktop.generated.resources.ic_rounded_refresh
+import com.music.vivi.desktop.generated.resources.ic_rounded_system_update
+import com.music.vivi.desktop.presentation.components.ExpressiveSwitchRow
+import com.music.vivi.desktop.utils.BrowserUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -65,6 +74,7 @@ val Legacy155RealPages = setOf(
     SettingsSection.V155_ACCOUNT,
     SettingsSection.V155_BACKUP,
     SettingsSection.V155_STORAGE,
+    SettingsSection.V155_UPDATES,
     SettingsSection.V155_WRAPPED,
     SettingsSection.V155_SPOTIFY,
 )
@@ -74,6 +84,7 @@ val Legacy155RealPageKeys: Map<SettingsSection, Set<String>> = mapOf(
     SettingsSection.V155_BACKUP to setOf("autoBackupEnabled", "autoBackupWeekly", "backupBeforeUpdate", "lastAutoBackupAt", "backupFile"),
     SettingsSection.V155_ACCOUNT to setOf("accountName", "accountEmail"),
     SettingsSection.V155_STORAGE to setOf("audioCacheLimitMb", "audioCacheEnabled", "musicDirectories", "librarySize"),
+    SettingsSection.V155_UPDATES to setOf("currentVersion", "updateLastCheck"),
     SettingsSection.V155_WRAPPED to setOf("wrappedTracks", "wrappedMinutes", "wrappedTopArtist"),
     SettingsSection.V155_SPOTIFY to setOf("spotifyAccount", "spotifyImportState"),
 )
@@ -346,6 +357,180 @@ fun Legacy155StoragePage(
                     Text("${folders.size} music folder(s)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+        }
+    }
+}
+
+/**
+ * The real update screen: the version check, the release changelog, the
+ * verified installer download and its progress all come from the same holder
+ * the startup check and About page use.
+ */
+@Composable
+fun Legacy155UpdatesPage(
+    viewModel: PlayerViewModel,
+    modifier: Modifier = Modifier,
+) {
+    val holder = viewModel.updateStateHolder
+    if (holder == null) {
+        Text(
+            text = "Updates are unavailable in this build.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = modifier,
+        )
+        return
+    }
+
+    val checkResult by holder.checkResult.collectAsState()
+    val release by holder.availableRelease.collectAsState()
+    val downloadState by holder.downloadState.collectAsState()
+    val checkOnStartup by holder.checkUpdatesOnStartup.collectAsState()
+
+    val status = when (val result = checkResult) {
+        is UpdateCheckResult.Idle -> "Current: v${BuildConfig.APP_VERSION_NAME} • Check GitHub Releases"
+        is UpdateCheckResult.Checking -> "Checking GitHub Releases..."
+        is UpdateCheckResult.UpdateAvailable -> "Update available: ${result.release.versionTag}"
+        is UpdateCheckResult.UpToDate -> "You are up to date (v${result.currentVersion})."
+        is UpdateCheckResult.Error -> result.message
+    }
+
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SettingsSubsection(title = "CURRENT VERSION") {
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "Axolotl Music ${BuildConfig.APP_VERSION_NAME}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = status,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (checkResult is UpdateCheckResult.UpdateAvailable) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { holder.checkForUpdates() },
+                            enabled = checkResult !is UpdateCheckResult.Checking,
+                            modifier = Modifier.testTag("legacy-update-check"),
+                        ) {
+                            Icon(painterResource(Res.drawable.ic_rounded_refresh), null, Modifier.size(18.dp))
+                            Spacer(Modifier.size(8.dp))
+                            Text("Check for updates")
+                        }
+                        TextButton(onClick = { release?.let { BrowserUtils.openBrowser(it.htmlUrl) } }) {
+                            Icon(painterResource(Res.drawable.ic_automirrored_rounded_open_in_new), null, Modifier.size(18.dp))
+                            Spacer(Modifier.size(8.dp))
+                            Text("Open release page")
+                        }
+                    }
+                }
+            }
+        }
+
+        if (release != null) {
+            SettingsSubsection(title = "AVAILABLE RELEASE") {
+                Surface(
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "Version ${release!!.versionName}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = release!!.releaseNotes.trim().ifBlank { "No changelog was published for this release." },
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        when (val state = downloadState) {
+                            is UpdateDownloadState.Idle -> Button(
+                                onClick = { holder.downloadUpdate() },
+                                modifier = Modifier.testTag("legacy-update-download"),
+                            ) {
+                                Icon(painterResource(Res.drawable.ic_outlined_file_download), null, Modifier.size(18.dp))
+                                Spacer(Modifier.size(8.dp))
+                                Text("Download installer")
+                            }
+                            is UpdateDownloadState.Downloading -> {
+                                val total = state.total.takeIf { it > 0L }
+                                val progress = if (total != null) {
+                                    (state.received.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+                                } else {
+                                    0f
+                                }
+                                Text(
+                                    text = if (total != null) {
+                                        "Downloading ${state.received / (1024 * 1024)} of ${total / (1024 * 1024)} MB"
+                                    } else {
+                                        "Downloading ${state.received / (1024 * 1024)} MB"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                if (total != null) {
+                                    LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+                                } else {
+                                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                                }
+                            }
+                            is UpdateDownloadState.Ready -> {
+                                Text(
+                                    text = "Downloaded and verified: ${state.file.name}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Text(
+                                    text = "SHA-256 ${state.sha256}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Button(
+                                    onClick = { holder.installUpdate() },
+                                    modifier = Modifier.testTag("legacy-update-install"),
+                                ) {
+                                    Icon(painterResource(Res.drawable.ic_rounded_system_update), null, Modifier.size(18.dp))
+                                    Spacer(Modifier.size(8.dp))
+                                    Text("Install update")
+                                }
+                            }
+                            is UpdateDownloadState.Failed -> {
+                                Text(state.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                                Button(onClick = { holder.downloadUpdate() }) { Text("Try again") }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        SettingsSubsection(title = "STARTUP") {
+            ExpressiveSwitchRow(
+                title = "Check for updates on startup",
+                subtitle = "Ask GitHub Releases when the app opens",
+                checked = checkOnStartup,
+                onCheckedChange = { holder.setCheckUpdatesOnStartup(it) },
+                leadingIcon = {
+                    Icon(
+                        painterResource(Res.drawable.ic_rounded_refresh),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.secondary,
+                        modifier = Modifier.size(22.dp),
+                    )
+                },
+                shape = getGroupShape(0, 1),
+            )
         }
     }
 }

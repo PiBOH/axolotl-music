@@ -1,5 +1,6 @@
 package com.music.vivi.desktop.presentation.screens.settings
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,18 +15,19 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -36,27 +38,20 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 
 import com.music.vivi.desktop.BuildConfig
-import com.music.vivi.desktop.domain.model.UpdateCheckResult
 import com.music.vivi.desktop.generated.resources.Res
 import com.music.vivi.desktop.generated.resources.ic_automirrored_rounded_open_in_new
 import com.music.vivi.desktop.generated.resources.ic_github
-import com.music.vivi.desktop.generated.resources.ic_outlined_cloud_download
 import com.music.vivi.desktop.generated.resources.ic_rounded_auto_awesome
 import com.music.vivi.desktop.generated.resources.ic_rounded_balance
-import com.music.vivi.desktop.generated.resources.ic_rounded_check_circle
 import com.music.vivi.desktop.generated.resources.ic_rounded_chevron_right
 import com.music.vivi.desktop.generated.resources.ic_rounded_group
 import com.music.vivi.desktop.generated.resources.ic_rounded_palette
-import com.music.vivi.desktop.presentation.components.ExpressiveCircularProgressIndicator
 import com.music.vivi.desktop.presentation.components.ViviLogo
 import com.music.vivi.desktop.generated.resources.ic_rounded_public
-import com.music.vivi.desktop.generated.resources.ic_rounded_refresh
-import com.music.vivi.desktop.generated.resources.ic_rounded_system_update
 import com.music.vivi.desktop.generated.resources.ic_telegram
-import com.music.vivi.desktop.presentation.components.AppUpdateDialog
-import com.music.vivi.desktop.presentation.components.ExpressiveSwitch
 import com.music.vivi.desktop.presentation.viewmodel.PlayerViewModel
 import com.music.vivi.desktop.utils.BrowserUtils
+import kotlinx.coroutines.delay
 
 private data class ProjectLink(
     val id: String,
@@ -113,30 +108,30 @@ fun AboutSectionContent(
     modifier: Modifier = Modifier
 ) {
     val colors = MaterialTheme.colorScheme
-    val updateHolder = viewModel?.updateStateHolder
+    val developerUnlocked = viewModel?.developerOptionsUnlocked?.collectAsState()?.value ?: false
 
-    val checkResult = updateHolder?.checkResult?.collectAsState()?.value ?: UpdateCheckResult.Idle
-    val availableRelease = updateHolder?.availableRelease?.collectAsState()?.value
-    val checkUpdatesOnStartup = updateHolder?.checkUpdatesOnStartup?.collectAsState()?.value ?: true
+    var logoTaps by remember { mutableStateOf(0) }
+    var logoFeedback by remember { mutableStateOf<String?>(null) }
 
-    var showManualDialog by remember { mutableStateOf(false) }
+    LaunchedEffect(logoFeedback) {
+        if (logoFeedback != null) {
+            delay(2_400)
+            logoFeedback = null
+        }
+    }
 
-    if (showManualDialog && availableRelease != null) {
-        updateHolder.let { holder ->
-            AppUpdateDialog(
-                release = availableRelease,
-                onDismiss = { skipThisVersion ->
-                    holder.dismissUpdateDialog(skipThisVersion)
-                    showManualDialog = false
-                },
-                onOpenRelease = { url ->
-                    holder.openReleasePage(url)
-                },
-                downloadState = holder?.downloadState?.collectAsState()?.value
-                    ?: com.music.vivi.desktop.domain.model.UpdateDownloadState.Idle,
-                onDownload = { holder?.downloadUpdate() },
-                onInstall = { holder?.installUpdate() }
-            )
+    val onLogoTap: () -> Unit = {
+        if (developerUnlocked) {
+            logoFeedback = "Developer options are already unlocked"
+        } else {
+            logoTaps += 1
+            if (logoTaps >= 7) {
+                viewModel?.setDeveloperOptionsUnlocked(true)
+                logoFeedback = "Developer options unlocked"
+                logoTaps = 0
+            } else if (logoTaps >= 4) {
+                logoFeedback = "${7 - logoTaps} more taps to unlock Developer options"
+            }
         }
     }
 
@@ -160,7 +155,10 @@ fun AboutSectionContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     ViviLogo(
-                        modifier = Modifier.size(64.dp),
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clickable { onLogoTap() }
+                            .testTag("about-logo"),
                         contentDescription = BuildConfig.APP_NAME
                     )
 
@@ -179,6 +177,21 @@ fun AboutSectionContent(
                             color = colors.onSurfaceVariant,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                AnimatedVisibility(visible = logoFeedback != null) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = colors.secondaryContainer,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = logoFeedback.orEmpty(),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = colors.onSecondaryContainer,
                         )
                     }
                 }
@@ -228,163 +241,6 @@ fun AboutSectionContent(
                                 )
                             }
                         }
-                    }
-                }
-            }
-        }
-
-        SettingsSubsection(title = "UPDATES") {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Surface(
-                    shape = getGroupShape(0, 2),
-                    color = colors.surfaceContainer,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            if (checkResult is UpdateCheckResult.UpdateAvailable) {
-                                showManualDialog = true
-                            } else if (checkResult !is UpdateCheckResult.Checking) {
-                                updateHolder?.checkForUpdates()
-                            }
-                        }
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = colors.primaryContainer
-                        ) {
-                            Icon(
-                                painter = painterResource(Res.drawable.ic_rounded_system_update),
-                                contentDescription = null,
-                                tint = colors.onPrimaryContainer,
-                                modifier = Modifier
-                                    .padding(10.dp)
-                                    .size(22.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(16.dp))
-
-                        Column(
-                            modifier = Modifier.weight(1f),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "Check for updates",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = colors.onSurface
-                            )
-                            val subtitle = when (checkResult) {
-                                is UpdateCheckResult.Checking -> "Checking GitHub Releases..."
-                                is UpdateCheckResult.UpdateAvailable -> "Update available: ${checkResult.release.versionTag}. Click to view."
-                                is UpdateCheckResult.UpToDate -> "${BuildConfig.APP_NAME} is up to date (v${checkResult.currentVersion})."
-                                is UpdateCheckResult.Error -> "${checkResult.message} Click to retry."
-                                is UpdateCheckResult.Idle -> "Current: v${BuildConfig.APP_VERSION_NAME} • Check GitHub Releases"
-                            }
-                            Text(
-                                text = subtitle,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = if (checkResult is UpdateCheckResult.UpdateAvailable) colors.primary else colors.onSurfaceVariant
-                            )
-                        }
-
-                        when (checkResult) {
-                            is UpdateCheckResult.Checking -> {
-                                ExpressiveCircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp,
-                                    color = colors.primary
-                                )
-                            }
-                            is UpdateCheckResult.UpdateAvailable -> {
-                                Button(
-                                    onClick = { showManualDialog = true },
-                                    shape = RoundedCornerShape(16.dp)
-                                ) {
-                                    Text("Update")
-                                }
-                            }
-                            is UpdateCheckResult.UpToDate -> {
-                                Icon(
-                                    painter = painterResource(Res.drawable.ic_rounded_check_circle),
-                                    contentDescription = null,
-                                    tint = colors.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            else -> {
-                                Icon(
-                                    painter = painterResource(Res.drawable.ic_rounded_refresh),
-                                    contentDescription = null,
-                                    tint = colors.onSurfaceVariant.copy(alpha = 0.6f),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Surface(
-                    shape = getGroupShape(1, 2),
-                    color = colors.surfaceContainer,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { updateHolder?.setCheckUpdatesOnStartup(!checkUpdatesOnStartup) }
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = colors.primaryContainer
-                        ) {
-                            Icon(
-                                painter = painterResource(Res.drawable.ic_outlined_cloud_download),
-                                contentDescription = null,
-                                tint = colors.onPrimaryContainer,
-                                modifier = Modifier
-                                    .padding(10.dp)
-                                    .size(22.dp)
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.width(16.dp))
-
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 12.dp),
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = "Check for updates on startup",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = colors.onSurface
-                            )
-                            Text(
-                                text = "Automatically notify when a new release is available",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = colors.onSurfaceVariant
-                            )
-                        }
-
-                        ExpressiveSwitch(
-                            checked = checkUpdatesOnStartup,
-                            onCheckedChange = { updateHolder?.setCheckUpdatesOnStartup(it) }
-                        )
                     }
                 }
             }

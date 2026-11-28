@@ -33,6 +33,7 @@ import com.music.vivi.desktop.presentation.screens.settings.SettingsOverviewMenu
 import com.music.vivi.desktop.presentation.screens.settings.SettingsSearchCatalog
 import com.music.vivi.desktop.presentation.screens.settings.SettingsSearchResults
 import com.music.vivi.desktop.presentation.screens.settings.SettingsSection
+import com.music.vivi.desktop.presentation.screens.settings.SystemSettingsScreen
 import com.music.vivi.desktop.presentation.viewmodel.PlayerViewModel
 
 enum class LibrarySubDetail {
@@ -133,11 +134,28 @@ fun SettingsScreen(
                     onBack = { onNavigate(null, LibrarySubDetail.NONE) }
                 )
             }
+            section == SettingsSection.SYSTEM -> {
+                SystemSettingsScreen(
+                    viewModel = viewModel,
+                    onBack = { onNavigate(null, LibrarySubDetail.NONE) },
+                    onNavigate = { target -> onNavigate(target, LibrarySubDetail.NONE) },
+                )
+            }
             section.isLegacy155 -> {
                 Legacy155SettingsScreen(
                     section = section,
                     viewModel = viewModel,
-                    onBack = { onNavigate(null, LibrarySubDetail.NONE) },
+                    onBack = {
+                        val parent = if (
+                            section == SettingsSection.V155_UPDATES ||
+                            section == SettingsSection.V155_DEVELOPER
+                        ) {
+                            SettingsSection.SYSTEM
+                        } else {
+                            null
+                        }
+                        onNavigate(parent, LibrarySubDetail.NONE)
+                    },
                     onNavigate = { target -> onNavigate(target, LibrarySubDetail.NONE) },
                     actions = legacyActions
                 )
